@@ -22,6 +22,7 @@ import {live} from 'lit/directives/live.js';
 
 import {LlmChatStateController} from '../state_controller.js';
 import {sharedStyles} from '../styles/shared_styles.js';
+import {icon} from './icons.js';
 
 /* tslint:disable:no-new-decorators */
 
@@ -73,7 +74,7 @@ export class DocumentChatWindow extends LitElement {
       .chat-welcome > p { font-size:14px; color:var(--ink-muted); line-height:1.65; margin:0 0 22px; }
       .starters-container { display:flex; flex-direction:column; gap:8px; }
       .btn-starter { display:flex; justify-content:space-between; align-items:center; gap:10px; border:1px solid var(--line); background:var(--surface); color:var(--ink); padding:12px 14px; border-radius:9px; font-size:13px; cursor:pointer; font-family:inherit; text-align:left; line-height:1.5; }
-      .btn-starter::after { content:'↗'; color:#9aa79b; font-size:15px; }
+      .btn-starter svg { color:#9aa79b; }
       .btn-starter:hover:not(:disabled) { background:var(--accent-soft); border-color:#b0c7b8; }
       .composer-help { margin:6px 0 0; color:var(--ink-muted); font-size:11px; line-height:1.4; }
       .input-wrapper { display:flex; align-items:flex-end; gap:8px; padding:8px 10px; border:1px solid #d6ded3; border-radius:10px; background:var(--surface); }
@@ -254,16 +255,16 @@ export class DocumentChatWindow extends LitElement {
     return html`
       <div id="chat-messages" class="chat-messages" role="log" aria-label="Conversation" aria-live="polite">
         ${isMessagesEmpty ? html`<div class="chat-welcome">
-          <span class="welcome-mark" aria-hidden="true">↳</span>
+          <span class="welcome-mark" aria-hidden="true">${icon('message', 30)}</span>
           <h3>${this.state.chatSession.missingDocument ? 'Let’s reopen the source.' : this.state.chatSession.currentDoc ? 'What would you like to understand?' : 'Start with a question.'}</h3>
           <p>${this.state.chatSession.missingDocument ? 'Open the original document to continue this saved conversation.' : this.state.chatSession.currentDoc ? 'Explore the ideas, ask about the details, and check the passages behind each answer.' : 'Ask a question, or open a document to explore its ideas together.'}</p>
           <div class="starters-container">
             ${this.state.chatSession.currentDoc ? html`
-              <button class="btn-starter" ?disabled=${startersDisabled} @click=${() => this.useStarter('What are the core findings and main points of this document?')}>What are the main ideas?</button>
-              <button class="btn-starter" ?disabled=${startersDisabled} @click=${() => this.useStarter('Can you break down the key data and methodology in this document?')}>Explain the key data and methods</button>
-              <button class="btn-starter" ?disabled=${startersDisabled} @click=${() => this.useStarter('What conclusions or recommendations does the document make?')}>What does the document conclude?</button>` : html`
-              <button class="btn-starter" ?disabled=${startersDisabled} @click=${() => this.useStarter('What types of documents can I upload and analyze?')}>Which documents can I explore?</button>
-              <button class="btn-starter" ?disabled=${startersDisabled} @click=${() => this.useStarter('How does local WebGPU document intelligence work?')}>How does local analysis work?</button>`}
+              <button class="btn-starter" ?disabled=${startersDisabled} @click=${() => this.useStarter('What are the core findings and main points of this document?')}>What are the main ideas?${icon('arrow-up-right')}</button>
+              <button class="btn-starter" ?disabled=${startersDisabled} @click=${() => this.useStarter('Can you break down the key data and methodology in this document?')}>Explain the key data and methods${icon('arrow-up-right')}</button>
+              <button class="btn-starter" ?disabled=${startersDisabled} @click=${() => this.useStarter('What conclusions or recommendations does the document make?')}>What does the document conclude?${icon('arrow-up-right')}</button>` : html`
+              <button class="btn-starter" ?disabled=${startersDisabled} @click=${() => this.useStarter('What types of documents can I upload and analyze?')}>Which documents can I explore?${icon('arrow-up-right')}</button>
+              <button class="btn-starter" ?disabled=${startersDisabled} @click=${() => this.useStarter('How does local WebGPU document intelligence work?')}>How does local analysis work?${icon('arrow-up-right')}</button>`}
           </div>
         </div>` : ''}
         ${this.state.chatSession.messages.map((msg, idx) => html`<document-chat-bubble .message=${msg} .index=${idx} .state=${this.state} .busy=${this.state.chatSession.isBusy} @edit-prompt=${this.handleEditPrompt}></document-chat-bubble>`)}
@@ -279,10 +280,11 @@ export class DocumentChatWindow extends LitElement {
             ?disabled=${this.documentLoading || isLoading || this.state.chatSession.isSummarizing || this.state.chatSession.isRestoring || this.state.chatSession.missingDocument}
             @input=${this.handleInputHeight} @keydown=${this.handleKeyDown}></textarea>
           <div class="composer-actions">
-            ${this.state.chatSession.isGenerating ? html`<button class="btn btn-stop composer-button" @click=${() => this.state.chatSession.cancelGeneration()}>Stop</button>` : html`
+            ${this.state.chatSession.isGenerating ? html`<button class="btn btn-stop composer-button" @click=${() => this.state.chatSession.cancelGeneration()}>Stop${icon('stop', 14)}</button>` : html`
               <button id="btn-send" class="btn btn-primary composer-button"
                 ?disabled=${(isModelLoaded && !hasDraft) || this.documentLoading || isLoading || this.state.chatSession.isSummarizing || this.state.chatSession.isRestoring || this.state.chatSession.missingDocument}
-                @click=${this.triggerSendMessage}>${isLoading ? 'Loading…' : !isModelLoaded ? hasDraft ? 'Load model and send' : 'Load model' : 'Send'} <span aria-hidden="true">↑</span></button>`}
+                @click=${this.triggerSendMessage}>${isLoading ? 'Loading…' : !isModelLoaded ? hasDraft ? 'Load model and send' : 'Load model' : 'Send'}
+                ${icon(isLoading ? 'loading' : !isModelLoaded && !hasDraft ? 'download' : 'send', 14, isLoading ? 'icon-spin' : '')}</button>`}
           </div>
         </div>
         <p class="composer-help">Check answers against the source. Shift + Enter for a new line.</p>

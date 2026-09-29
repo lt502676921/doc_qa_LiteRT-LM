@@ -16,6 +16,7 @@
 
 import {css, html, LitElement} from 'lit';
 import {customElement, property, state} from 'lit/decorators.js';
+import {icon} from './icons.js';
 /* tslint:disable:no-new-decorators */
 
 /** A custom dropdown component. */
@@ -87,14 +88,12 @@ export class CustomDropdown extends LitElement {
       border-color: var(--teal, #00c99e);
     }
     
-    .dropdown-button:after {
-      content: '▼';
-      font-size: 0.65rem;
+    .dropdown-chevron {
       color: var(--text-muted, #64748b);
       transition: transform 0.2s;
     }
 
-    .dropdown-button.open:after {
+    .dropdown-button.open .dropdown-chevron {
       transform: rotate(-180deg);
     }
     
@@ -176,6 +175,7 @@ export class CustomDropdown extends LitElement {
       <button class="dropdown-button ${this.isOpen ? 'open' : ''}" @click=${
         this.toggleDropdown}>
         ${buttonText}
+        ${icon('chevron-down', 14, 'dropdown-chevron')}
       </button>
       <div class="dropdown-content ${this.isOpen ? 'show' : ''}">
         <slot @slotchange=${this.requestUpdate} @click=${

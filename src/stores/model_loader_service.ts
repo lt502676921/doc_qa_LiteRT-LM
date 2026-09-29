@@ -283,7 +283,7 @@ export class ModelLoaderService {
                 }
                 console.error('[Doc Q&A] Cache write failed:', err);
                 this.updateStatus(
-                    '⚠ Cache Failed: Disk quota exceeded. (Running from memory)');
+                    'Cache Failed: Disk quota exceeded. (Running from memory)');
               });
 
           modelInput = loaderStream;

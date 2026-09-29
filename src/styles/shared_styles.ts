@@ -55,6 +55,10 @@ export const sharedStyles = css`
   }
 
   /* Base buttons */
+  .icon-spin { animation: icon-spin 1s linear infinite; }
+  @keyframes icon-spin { to { transform: rotate(360deg); } }
+  @media (prefers-reduced-motion: reduce) { .icon-spin { animation: none; } }
+
   .btn {
     font-weight: 600;
     padding: 10px 18px;

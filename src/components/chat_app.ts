@@ -32,6 +32,7 @@ import type {SourceCitation} from '../services/citation_service.js';
 import type {DocumentPreview} from './document_preview.js';
 import { sharedStyles } from '../styles/shared_styles.js';
 import { workspaceStyles } from '../styles/workspace_styles.js';
+import {icon} from './icons.js';
 import { registerAppServiceWorker, renderHtml, setIframeHtml } from './util.js';
 
 /* tslint:disable:no-new-decorators */
@@ -58,6 +59,7 @@ export class DocumentQaApp extends LitElement {
   @state() private mobilePane: 'document' | 'assistant' = 'document';
   @state() private readingWidth = 60;
   @state() private isGeneralChat = false;
+  @state() private isDocumentFullscreen = false;
   private resizing = false;
   private workspaceObserver?: ResizeObserver;
   private previousDocumentId: string | null = null;
@@ -70,6 +72,7 @@ export class DocumentQaApp extends LitElement {
       this.assistantTab = 'chat';
       this.mobilePane = 'document';
       this.isGeneralChat = false;
+      this.isDocumentFullscreen = false;
       this.previousDocumentId = id;
     }
   }
@@ -131,7 +134,7 @@ export class DocumentQaApp extends LitElement {
             <h3>${this.isParsingDoc ? 'Opening your document…' : 'Bring a document. Start exploring.'}</h3>
             <p>${this.isParsingDoc ? 'Preparing the preview and readable text.' : 'Drop a file here, or choose one from your device.'}</p>
             ${this.isParsingDoc ? html`<span class="loading-bar" role="status" aria-label="Preparing document"></span>` : html`
-              <label class="file-btn">Choose a document <span aria-hidden="true">↗</span>
+              <label class="file-btn">Choose a document ${icon('arrow-up-right')}
                 <input aria-label="Choose a document" type="file" ?disabled=${busy}
                   accept=${ACCEPTED_FILE_TYPES} @change=${this.handleFileChosen}>
               </label>`}
@@ -149,25 +152,25 @@ export class DocumentQaApp extends LitElement {
         </div>
         <section class="recent-section" aria-label="Recent documents">
           <div class="section-heading"><h3>Pick up where you left off</h3>
-            <button class="text-button" @click=${this.toggleSidebar}>View history <span aria-hidden="true">↗</span></button>
+            <button class="text-button" @click=${this.toggleSidebar}>View history ${icon('arrow-up-right')}</button>
           </div>
           ${recent.length ? html`<div class="recent-grid">${recent.map(item => html`
             <button class="recent-card" ?disabled=${busy} @click=${() => this.openRecent(item.id)}>
               <span class="recent-icon">${this.documentIcon()}</span>
               <span class="recent-copy"><strong>${item.documentName || item.title}</strong><small>${new Date(item.createdAt).toLocaleDateString(undefined, {month: 'short', day: 'numeric'})} · Saved on this device</small></span>
-              <span class="card-arrow" aria-hidden="true">↗</span>
+              <span class="card-arrow" aria-hidden="true">${icon('arrow-up-right')}</span>
             </button>`)}</div>` : html`<p class="recent-empty">Your documents and conversations will appear here after you open a file.</p>`}
         </section>
         ${this.renderExamples()}
         <footer class="welcome-footer"><span>Files stay in your browser. Analysis uses readable text.</span>
-          <button class="text-button" @click=${() => {this.isGeneralChat = true; this.mobilePane = 'assistant';}}>Chat without a document →</button>
+          <button class="text-button" @click=${() => {this.isGeneralChat = true; this.mobilePane = 'assistant';}}>Chat without a document ${icon('arrow-right')}</button>
         </footer>
       </div>
     </main>`;
   }
 
   private documentIcon() {
-    return html`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path><path d="M14 3v6h6M8 13h8M8 17h5"></path></svg>`;
+    return icon('file', 24);
   }
 
   override firstUpdated() {
@@ -260,7 +263,7 @@ export class DocumentQaApp extends LitElement {
       <div class="example-grid">${EXAMPLE_PAPERS.map(paper => html`
         <button class="example-card" ?disabled=${this.isParsingDoc || this.state.chatSession.isBusy}
           @click=${() => this.selectExample(paper.id)}>
-          <span class="example-type">PDF <span aria-hidden="true">↗</span></span>
+          <span class="example-type">PDF ${icon('arrow-up-right')}</span>
           <strong>${this.loadingExample === paper.id ? 'Loading…' : paper.title}</strong>
           <span>${paper.year} · ${paper.pages} pages</span>
           ${compact ? '' : html`<small>${paper.description}</small>`}
@@ -340,7 +343,7 @@ export class DocumentQaApp extends LitElement {
       <div class="sidebar-overlay ${this.isSidebarOpen ? 'open' : ''}" @click=${this.toggleSidebar}></div>
       <aside class="sidebar ${this.isSidebarOpen ? 'open' : ''}" ?inert=${!this.isSidebarOpen} aria-label="History and settings">
         <div class="drawer-header"><h2 class="drawer-title">History &amp; settings</h2>
-          <button class="icon-button" aria-label="Close Drawer" @click=${this.toggleSidebar}>✕</button></div>
+          <button class="icon-button" aria-label="Close Drawer" @click=${this.toggleSidebar}>${icon('close', 20)}</button></div>
         <document-sidebar style=${busy ? 'pointer-events:none;opacity:0.6' : ''} .state=${this.state}
           @new-workspace=${() => {this.isGeneralChat = false; this.assistantTab = 'chat'; this.mobilePane = 'document';}}
           @close=${() => this.isSidebarOpen = false}></document-sidebar>
@@ -349,9 +352,12 @@ export class DocumentQaApp extends LitElement {
         <div class="topbar-left">
           <button id="btn-toggle-sidebar" class="icon-button" aria-label="Toggle Menu" title="History and settings"
             aria-expanded=${this.isSidebarOpen} @click=${this.toggleSidebar}>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="3"></rect><path d="M9 4v16"></path></svg>
+            ${icon('sidebar', 20)}
           </button>
-          <div class="brand-group"><h1 class="brand">Doc Q&amp;A<span class="brand-dot">.</span></h1><span class="brand-divider"></span><span class="brand-description">Read with understanding</span></div>
+          <div class="brand-group"><div class="brand-lockup">
+            <img class="brand-mark" src=${`${import.meta.env.BASE_URL}icons/document-qa.svg`} width="32" height="32" alt="" aria-hidden="true">
+            <h1 class="brand">Doc Q&amp;A<span class="brand-dot">.</span></h1>
+          </div><span class="brand-divider"></span><span class="brand-description">Read with understanding</span></div>
         </div>
         <div class="topbar-right">
           <button class="topbar-status-badge ${statusType}" title=${this.state.statusText} @click=${this.toggleSidebar}>
@@ -362,23 +368,24 @@ export class DocumentQaApp extends LitElement {
         </div>
       </header>
       ${welcome ? this.renderWelcome(busy) : html`
-        <nav class="mobile-switch" aria-label="Workspace view">
+        <nav class="mobile-switch" aria-label="Workspace view" ?hidden=${this.isDocumentFullscreen}>
           <button aria-pressed=${this.mobilePane === 'document'} @click=${() => this.mobilePane = 'document'}>Document</button>
           <button aria-pressed=${this.mobilePane === 'assistant'} @click=${() => this.mobilePane = 'assistant'}>Assistant</button>
         </nav>
-        <main class="workspace ${this.resizing ? 'resizing' : ''}" style=${`--reading-width: ${this.readingWidth}%`}>
+        <main class="workspace ${this.resizing ? 'resizing' : ''} ${this.isDocumentFullscreen ? 'fullscreen' : ''}" style=${`--reading-width: ${this.readingWidth}%`}>
           <section class="pane pane-document ${this.mobilePane === 'document' ? 'mobile-active' : ''}" aria-label="Document Preview"
             @dragover=${this.handleDragOver} @dragleave=${this.handleDragLeave} @drop=${this.handleDrop}>
             <div class="pane-header"><div class="document-heading"><span class="document-symbol">${this.documentIcon()}</span>
-              <div><h2 class="document-name" title=${currentDoc?.name || 'Document'}>${currentDoc?.name || 'Your document'}</h2>
-                <p class="pane-meta">${currentDoc ? `${currentDoc.extension.toUpperCase()} · ${currentDoc.units.length} ${currentDoc.extension === 'pdf' ? 'pages' : 'sections'}` : 'Open a file to read alongside your conversation'}</p></div></div>
-              ${currentDoc ? html`<button class="icon-button" aria-label="Close document" title="Close document" ?disabled=${busy} @click=${this.handleCloseDoc}>✕</button>` : ''}
+              <div class="document-info"><h2 class="document-name" title=${currentDoc?.name || 'Document'}>${currentDoc?.name || 'Your document'}</h2>
+                ${currentDoc ? html`<p class="pane-meta">${currentDoc.extension.toUpperCase()} · ${currentDoc.units.length} ${currentDoc.extension === 'pdf' ? 'pages' : 'sections'}</p>` : ''}</div></div>
+              ${currentDoc ? html`<button class="icon-button" aria-label="Close document" title="Close document" ?disabled=${busy} @click=${this.handleCloseDoc}>${icon('close', 16)}</button>` : ''}
             </div>
             ${this.docError ? html`<p class="error-note" role="alert">${this.docError}</p>` : ''}
             ${this.isParsingDoc ? html`<div class="document-empty"><span class="loading-bar" role="status" aria-label="Preparing document"></span><p>Opening your document…</p></div>` : currentDoc ? html`
               <document-preview .document=${currentDoc} .scope=${chat.scope} .busy=${busy}
+                @fullscreen-changed=${(event: CustomEvent<boolean>) => {this.isDocumentFullscreen = event.detail;}}
                 @scope-changed=${(event: CustomEvent<string | null>) => chat.setScope(event.detail)}></document-preview>
-              <p class="document-footnote">${currentDoc.unreadableUnits.length ? html`<span class="error-note">No readable text: ${currentDoc.unreadableUnits.join(', ')}.</span>` : 'Analysis uses readable text; images and scanned pages are not interpreted.'}</p>
+              ${currentDoc.unreadableUnits.length ? html`<p class="document-footnote"><span class="error-note">No readable text: ${currentDoc.unreadableUnits.join(', ')}.</span></p>` : ''}
             ` : html`<div class="document-empty ${this.isDraggingOver ? 'dragging' : ''}">${this.documentIcon()}<h3>A place for your source</h3><p>Open a document to keep its original text beside the answers.</p>
               <label class="file-btn">Choose a document<input aria-label="Choose a document" type="file" ?disabled=${busy} accept=${ACCEPTED_FILE_TYPES} @change=${this.handleFileChosen}></label>
               <details class="inline-examples"><summary>Explore an example instead</summary>${this.renderExamples(true)}</details></div>`}
@@ -401,7 +408,7 @@ export class DocumentQaApp extends LitElement {
             </div>
             ${currentDoc || chat.missingDocument ? html`
               <details class="context-panel ${plan.error || chat.missingDocument ? 'context-warning' : ''}" ?open=${!!plan.error || chat.missingDocument}>
-                <summary><span class="context-dot"></span><span>${plan.error ? 'Reading limit needs attention' : chat.missingDocument ? 'Reopen your document' : plan.mode === 'relevant' ? 'Reading relevant excerpts' : chat.scope ? chat.readingScopeLabel : 'Reading the full document'}</span><span class="context-percent" aria-hidden="true">⌄</span></summary>
+                <summary><span class="context-dot"></span><span>${plan.error ? 'Reading limit needs attention' : chat.missingDocument ? 'Reopen your document' : plan.mode === 'relevant' ? 'Reading relevant excerpts' : chat.scope ? chat.readingScopeLabel : 'Reading the full document'}</span><span class="context-percent" aria-hidden="true">${icon('chevron-down', 14)}</span></summary>
                 <div class="context-details"><div class="context-heading"><strong>Context usage</strong><span>~${plan.inputTokens.toLocaleString()} / ${plan.limit.toLocaleString()}</span></div>
                   <progress max="100" value=${percentage} aria-label="Estimated context including reserves"></progress>
                   <small>Includes ${plan.outputReserve.toLocaleString()} tokens for the answer and ${plan.margin.toLocaleString()} safety margin.${chat.actualContextTokens !== null ? html` Last measured: ${chat.actualContextTokens.toLocaleString()} tokens.` : ''}</small>
@@ -423,7 +430,7 @@ export class DocumentQaApp extends LitElement {
                   ${chat.summaryInvalidCitations.length ? html`<small class="error-note">Unrecognized references: ${chat.summaryInvalidCitations.join(', ')}</small>` : ''}
                   ${!isSummarizing && !chat.summaryCitations.length ? html`<small>No source references were provided. Check the summary against the document.</small>` : ''}
                   ${isSummarizing ? html`<span class="summary-streaming-indicator"></span>` : ''}</div>` : html`
-                    <div class="summary-empty"><span class="summary-illustration" aria-hidden="true">≡</span><h3>${isSummarizing ? 'Connecting the main ideas…' : 'The bigger picture, in a few words.'}</h3>
+                    <div class="summary-empty"><span class="summary-illustration" aria-hidden="true">${icon('summary', 32)}</span><h3>${isSummarizing ? 'Connecting the main ideas…' : 'The bigger picture, in a few words.'}</h3>
                       <p>${!currentDoc ? 'Open a document to get an overview of its main ideas.' : isSummarizing ? 'Your summary will appear here as it is generated.' : 'Generate an overview, then follow the references to explore the details.'}</p></div>`}
                 ${chat.summaryProgress ? html`<p class="text-note" role="status">${chat.summaryProgress}</p>` : ''}
               </div>
@@ -432,7 +439,7 @@ export class DocumentQaApp extends LitElement {
           </aside>
         </main>`}
       <div id="preview-overlay" class="preview-overlay" style=${`display: ${this.isPreviewOpen ? 'flex' : 'none'};`}>
-        <button id="btn-close-preview" class="btn-close-preview" @click=${this.closePreview}>Exit Preview ✕</button>
+        <button id="btn-close-preview" class="btn-close-preview" @click=${this.closePreview}>Exit Preview ${icon('close')}</button>
         <iframe id="preview-iframe" title="Generated HTML preview" sandbox="allow-scripts"></iframe>
       </div>`;
   }

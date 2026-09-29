@@ -21,6 +21,7 @@ import { customElement, property, query } from 'lit/decorators.js';
 import { LlmChatStateController } from '../state_controller.js';
 import { MODELS, PartialSettingsSchema, Settings } from '../stores/settings_store.js';
 import { sharedStyles } from '../styles/shared_styles.js';
+import {icon} from './icons.js';
 
 import './custom_dropdown';
 import type { CustomDropdown } from './custom_dropdown.js';
@@ -185,7 +186,7 @@ export class DocumentSidebar extends LitElement {
         background-color: var(--accent-soft) !important;
         color: var(--accent) !important;
       }
-      button.new-chat-item { width:100%; font-family:inherit; background:var(--surface); justify-content:flex-start; text-align:left; }
+      button.new-chat-item { width:100%; font-family:inherit; background:var(--surface); justify-content:flex-start; gap:6px; text-align:left; }
       .conv-open { display:flex; align-items:center; min-width:0; flex:1; padding:4px 0; border:0; background:transparent; font:inherit; color:inherit; text-align:left; cursor:pointer; }
       .conv-title {
         flex: 1;
@@ -456,15 +457,14 @@ export class DocumentSidebar extends LitElement {
 
       <!-- Saved Conversations List -->
       <div id="conversations-list" class="conversations-list" style="border-top: 1px solid var(--border); padding-top: 10px;">
-        <!-- ➕ New Chat dashed list header -->
+        <!-- New workspace list header -->
         <button class="conv-item new-chat-item ${this.state.chatSession.activeSavedConvId === null ? 'active' : ''}"
           @click=${async () => {
             await this.state.chatSession.startNewConversation();
             this.dispatchEvent(new CustomEvent('new-workspace', {bubbles:true, composed:true}));
             this.dismissSidebar();
           }}>
-          <!-- SVG large plus icon for new chat -->
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+          ${icon('plus', 14)}
           <span class="conv-title">New workspace</span>
         </button>
 
@@ -480,7 +480,7 @@ export class DocumentSidebar extends LitElement {
             <button class="btn-delete-conv" aria-label="Delete Conversation" style="background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 0.8rem; padding: 4px;" @click=${(e: Event) => {
               e.stopPropagation();
               this.state.chatSession.deleteConversation(conv.id);
-            }}>✕</button>
+            }}>${icon('trash', 14)}</button>
           </div>
         `)}
       </div>

@@ -16,6 +16,7 @@
 
 import {css, html, LitElement} from 'lit';
 import {customElement, property} from 'lit/decorators.js';
+import {icon} from './icons.js';
 
 /* tslint:disable:no-new-decorators */
 
@@ -63,6 +64,9 @@ export class DocumentCodeBlock extends LitElement {
     }
 
     .btn-preview-code {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
       background-color: var(--accent);
       color: #ffffff;
       border: none;
@@ -139,7 +143,7 @@ export class DocumentCodeBlock extends LitElement {
         isHtml && this.base64Code ?
             html`
               <button class="btn-preview-code" @click=${
-                this.handlePreview}>Preview HTML ⚡</button>
+                this.handlePreview}>Preview HTML ${icon('preview', 14)}</button>
             ` :
             ''}
             <button class="btn-copy-code" @click=${

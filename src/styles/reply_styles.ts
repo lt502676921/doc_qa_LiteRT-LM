@@ -26,13 +26,8 @@ export const replyStyles = css`
   .thought-summary { display:flex; align-items:center; gap:8px; padding:6px 10px; cursor:pointer; list-style:none; color:#466859; font-size:12px; line-height:1.5; font-weight:500; }
   .thought-summary::-webkit-details-marker { display:none; }
   .thought-summary:hover { background:#dfebe440; }
-  .reasoning-icon { display:flex; align-items:center; justify-content:center; gap:2px; width:15px; height:15px; flex-shrink:0; }
-  .reasoning-icon i { width:2px; border-radius:2px; background:#70a58e; height:7px; }
-  .reasoning-icon i:nth-child(2) { height:12px; }
-  .reasoning-icon i:nth-child(3) { height:9px; }
-  .thinking .reasoning-icon i { animation:reasoning 1.2s infinite ease-in-out; }
-  .thinking .reasoning-icon i:nth-child(2) { animation-delay:.2s; }
-  .thinking .reasoning-icon i:nth-child(3) { animation-delay:.4s; }
+  .reasoning-icon { display:flex; align-items:center; justify-content:center; width:15px; height:15px; flex-shrink:0; color:#70a58e; }
+  .thinking .reasoning-icon svg { animation:breathing 1.6s infinite ease-in-out; }
   .reasoning-hint { color:#6e7e75; font-size:10px; font-weight:400; margin-left:auto; white-space:nowrap; }
   .thought-summary > svg { width:12px; height:12px; color:#83958a; transition:transform .2s; }
   .thought-details[open] .thought-summary > svg { transform:rotate(90deg); }
@@ -104,7 +99,6 @@ export const replyStyles = css`
   .source-citation:focus-visible, .message-content a:focus-visible { outline:2px solid var(--accent); outline-offset:3px; }
   @keyframes breathing { 0%,100% { opacity:.4; } 50% { opacity:1; } }
   @keyframes scanning { 0% { transform:translateX(-100%); } 100% { transform:translateX(380%); } }
-  @keyframes reasoning { 0%,100% { transform:scaleY(.6); } 50% { transform:scaleY(1); } }
   @keyframes skeleton { 0% { background-position:200% 0; } 100% { background-position:-200% 0; } }
   @media (hover:hover) and (pointer:fine) {
     .user .message-actions { opacity:0; pointer-events:none; }

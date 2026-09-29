@@ -16,13 +16,14 @@
 
 import './code_block';
 
-import {html, nothing, svg, LitElement} from 'lit';
+import {html, nothing, LitElement} from 'lit';
 import {customElement, property, state as localState} from 'lit/decorators.js';
 import {marked, type Tokens} from 'marked';
 
 import {LlmChatStateController, type StoredMessage} from '../state_controller.js';
 import {sharedStyles} from '../styles/shared_styles.js';
 import {replyStyles} from '../styles/reply_styles.js';
+import {icon} from './icons.js';
 import {citationMarkdown} from '../services/citation_service.js';
 
 import {getLanguage, highlight, highlightAuto, hljsStyles} from './hljs_util.js';
@@ -213,16 +214,7 @@ export class DocumentChatBubble extends LitElement {
   }
 
   private icon(name: 'copy' | 'check' | 'retry' | 'edit' | 'chevron' | 'info' | 'file') {
-    const paths = {
-      copy: svg`<rect x="8" y="8" width="11" height="12" rx="2"></rect><path d="M15 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h3"></path>`,
-      check: svg`<path d="m5 12 4 4L19 6"></path>`,
-      retry: svg`<path d="M3 12a9 9 0 0 1 15.5-6.5L21 8M21 3v5h-5M21 12a9 9 0 0 1-15.5 6.5L3 16M3 21v-5h5"></path>`,
-      edit: svg`<path d="m15 4 5 5M4 20l4-1 12-12a2.8 2.8 0 0 0-4-4L4 15z"></path>`,
-      chevron: svg`<path d="m8 5 7 7-7 7"></path>`,
-      info: svg`<circle cx="12" cy="12" r="9"></circle><path d="M12 11v6M12 7h.01"></path>`,
-      file: svg`<path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9zM14 3v6h6M8 13h8M8 17h5"></path>`,
-    };
-    return html`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths[name]}</svg>`;
+    return icon(name);
   }
 
   private senderLabel() {
@@ -276,7 +268,7 @@ export class DocumentChatBubble extends LitElement {
         <div class="message-content" @click=${this.handleSourceClick}>
           ${!isUser && (msg.thoughtText || thinking) ? html`
             <details class="thought-details ${thinking ? 'thinking' : ''}">
-              <summary class="thought-summary"><span class="reasoning-icon" aria-hidden="true"><i></i><i></i><i></i></span>
+              <summary class="thought-summary"><span class="reasoning-icon" aria-hidden="true">${icon('reasoning', 15)}</span>
                 <span>${thinking ? 'Thinking through your question' : 'Reasoning'}</span>
                 <span class="reasoning-hint">${thinking ? 'Live' : 'View steps'}</span>${this.icon('chevron')}</summary>
               <div class="thought-content">${msg.thoughtText ? renderHtml(this.renderMarkdown(msg.thoughtText), {codeBlocks: true}) : 'Preparing the context…'}</div>

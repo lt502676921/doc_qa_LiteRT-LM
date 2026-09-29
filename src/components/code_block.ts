@@ -23,8 +23,8 @@ import {customElement, property} from 'lit/decorators.js';
  * Component representing a code block with copy and interactive preview
  * capabilities.
  */
-@customElement('litert-code-block')
-export class LitertCodeBlock extends LitElement {
+@customElement('document-code-block')
+export class DocumentCodeBlock extends LitElement {
   @property({type: String, attribute: 'base-64-code'}) base64Code = '';
 
   @property({type: String}) language = '';
@@ -95,14 +95,6 @@ export class LitertCodeBlock extends LitElement {
       background-color: rgba(28, 27, 22, 0.1);
       color: var(--ink);
     }
-      transition: background-color 0.15s, color 0.15s;
-      line-height: 1;
-    }
-
-    .btn-copy-code:hover {
-      background-color: var(--teal);
-      color: var(--bg-dark) !important;
-    }
   `;
 
   private handlePreview() {
@@ -130,9 +122,9 @@ export class LitertCodeBlock extends LitElement {
           })
           .catch(
               err =>
-                  console.error('[LiteRT-LM] Failed to copy code block:', err));
+                  console.error('[Doc Q&A] Failed to copy code block:', err));
     } catch (e) {
-      console.error('[LiteRT-LM] Failed to decode code block content:', e);
+      console.error('[Doc Q&A] Failed to decode code block content:', e);
     }
   }
 
@@ -162,6 +154,6 @@ export class LitertCodeBlock extends LitElement {
 
 declare global {
   interface HTMLElementTagNameMap {
-    'litert-code-block': LitertCodeBlock;
+    'document-code-block': DocumentCodeBlock;
   }
 }

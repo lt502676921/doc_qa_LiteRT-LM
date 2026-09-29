@@ -23,11 +23,11 @@ export const sharedStyles = css`
   }
 
   label {
-    font-size: 0.75rem;
+    font-size: 0.8125rem;
     font-weight: 600;
     color: var(--text-muted);
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
+    text-transform: none;
+    letter-spacing: 0;
   }
 
   select, input[type="number"], input[type="text"], textarea {
@@ -45,6 +45,13 @@ export const sharedStyles = css`
   select:focus, input:focus, textarea:focus {
     border-color: var(--accent);
     box-shadow: 0 0 0 2px var(--accent-soft);
+  }
+
+  [hidden] { display: none !important; }
+
+  button:focus-visible, summary:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 3px;
   }
 
   /* Base buttons */

@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-import {setSandboxIframeHtml} from './util.js';
 
 /**
  * Represents a console message captured during code execution in the sandbox.
@@ -185,7 +184,8 @@ export class CodeSandbox {
         </html>
       `;
 
-      setSandboxIframeHtml(iframe, runnerHtml);
+      iframe.setAttribute('sandbox', 'allow-scripts');
+      iframe.srcdoc = runnerHtml;
 
       timeoutId = setTimeout(() => {
         cleanup();

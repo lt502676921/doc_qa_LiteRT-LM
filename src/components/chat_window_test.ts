@@ -20,10 +20,10 @@ import {LlmChatStateController} from '../state_controller.js';
 import {ChatSessionStore} from '../stores/chat_session_store.js';
 import {ModelLoaderService} from '../stores/model_loader_service.js';
 import {SettingsStore} from '../stores/settings_store.js';
-import {LitertChatWindow} from './chat_window.js';
+import {DocumentChatWindow} from './chat_window.js';
 
-describe('litert-chat-window', () => {
-  let element: LitertChatWindow;
+describe('document-chat-window', () => {
+  let element: DocumentChatWindow;
   let mockState: jasmine.SpyObj<LlmChatStateController>;
   let mockChatSession: jasmine.SpyObj<ChatSessionStore>;
   let mockSettings: jasmine.SpyObj<SettingsStore>;
@@ -38,6 +38,7 @@ describe('litert-chat-window', () => {
     // Initialize properties used during render
     mockChatSession.isGenerating = false;
     mockChatSession.messages = [];
+    mockChatSession.sendMessage.and.returnValue(Promise.resolve(true));
 
     mockSettings = jasmine.createSpyObj('SettingsStore', ['saveSettings']);
     mockSettings.selectedModelPath = 'path/to/model_file.litertlm';
@@ -59,7 +60,7 @@ describe('litert-chat-window', () => {
       requestUpdate: jasmine.createSpy('requestUpdate'),
     } as unknown as jasmine.SpyObj<LlmChatStateController>;
 
-    element = document.createElement('litert-chat-window');
+    element = document.createElement('document-chat-window');
     element.state = mockState;
     document.body.appendChild(element);
     await element.updateComplete;
@@ -85,7 +86,7 @@ describe('litert-chat-window', () => {
     const starters = element.shadowRoot!.querySelectorAll('.btn-starter');
     expect(starters.length).toBe(0);
 
-    const bubbles = element.shadowRoot!.querySelectorAll('litert-chat-bubble');
+    const bubbles = element.shadowRoot!.querySelectorAll('document-chat-bubble');
     expect(bubbles.length).toBe(1);
   });
 
@@ -105,7 +106,7 @@ describe('litert-chat-window', () => {
   it('enables input when model is not loading', () => {
     const textarea = element.shadowRoot!.querySelector('#chat-input') as HTMLTextAreaElement;
     expect(textarea.disabled).toBeFalse();
-    expect(textarea.placeholder).toBe('Message LiteRT-LM...');
+    expect(textarea.placeholder).toBe('Ask a question about this document...');
 
     const sendBtn = element.shadowRoot!.querySelector('#btn-send') as HTMLButtonElement;
     expect(sendBtn.disabled).toBeFalse();
@@ -144,6 +145,8 @@ describe('litert-chat-window', () => {
   it('sends message on send button click', async () => {
     const textarea = element.shadowRoot!.querySelector('#chat-input') as HTMLTextAreaElement;
     textarea.value = 'Test prompt';
+    textarea.dispatchEvent(new Event('input'));
+    await element.updateComplete;
     
     const sendBtn = element.shadowRoot!.querySelector('#btn-send') as HTMLButtonElement;
     sendBtn.click();
@@ -205,6 +208,141 @@ describe('litert-chat-window', () => {
     expect(element.shadowRoot!.activeElement).toBe(textarea);
   });
 
+  it('keeps the submitted draft empty while the reply is still generating', async () => {
+    let finish!: (submitted: boolean) => void;
+    mockChatSession.sendMessage.and.callFake(prompt => {
+      mockChatSession.isGenerating = true;
+      mockChatSession.messages = [{role: 'user', text: prompt, senderName: 'User'},
+        {role: 'assistant', text: '', senderName: 'Assistant'}];
+      element.requestUpdate();
+      return new Promise(resolve => finish = resolve);
+    });
+    const textarea = element.shadowRoot!.querySelector<HTMLTextAreaElement>('#chat-input')!;
+    textarea.value = 'hi';
+    textarea.dispatchEvent(new Event('input'));
+    await element.updateComplete;
+    (element.shadowRoot!.querySelector('#btn-send') as HTMLButtonElement).click();
+    await element.updateComplete;
+    expect(mockChatSession.sendMessage).toHaveBeenCalledWith('hi');
+    expect(textarea.value).toBe('');
+    expect(textarea.style.height).toBe('');
+    expect(element.shadowRoot!.querySelector('.btn-stop')).toBeTruthy();
+    // Reconcile a stale native value when streaming triggers another render.
+    textarea.value = 'hi';
+    element.requestUpdate();
+    await element.updateComplete;
+    expect(textarea.value).toBe('');
+    mockChatSession.isGenerating = false;
+    finish(true);
+    await new Promise(resolve => setTimeout(resolve, 0));
+    element.requestUpdate();
+    await element.updateComplete;
+    expect(textarea.value).toBe('');
+  });
+
+  it('restores the draft when the question was not submitted', async () => {
+    mockChatSession.sendMessage.and.returnValue(Promise.resolve(false));
+    const textarea = element.shadowRoot!.querySelector<HTMLTextAreaElement>('#chat-input')!;
+    textarea.value = 'An unsent question';
+    textarea.dispatchEvent(new Event('input'));
+    await element.updateComplete;
+    (element.shadowRoot!.querySelector('#btn-send') as HTMLButtonElement).click();
+    await new Promise(resolve => setTimeout(resolve, 0));
+    await element.updateComplete;
+    expect(textarea.value).toBe('An unsent question');
+  });
+
+  it('preserves a newer draft when an earlier question was not submitted', async () => {
+    let finish!: (submitted: boolean) => void;
+    mockChatSession.sendMessage.and.returnValue(new Promise(resolve => finish = resolve));
+    const textarea = element.shadowRoot!.querySelector<HTMLTextAreaElement>('#chat-input')!;
+    textarea.value = 'Original question';
+    textarea.dispatchEvent(new Event('input'));
+    await element.updateComplete;
+    (element.shadowRoot!.querySelector('#btn-send') as HTMLButtonElement).click();
+    textarea.value = 'A new draft';
+    textarea.dispatchEvent(new Event('input'));
+    finish(false);
+    await new Promise(resolve => setTimeout(resolve, 0));
+    await element.updateComplete;
+    expect(textarea.value).toBe('A new draft');
+  });
+
+  it('keeps Enter from submitting text during input method composition', async () => {
+    const textarea = element.shadowRoot!.querySelector<HTMLTextAreaElement>('#chat-input')!;
+    textarea.value = '正在输入';
+    textarea.dispatchEvent(new Event('input'));
+    textarea.dispatchEvent(new KeyboardEvent('keydown', {key: 'Enter', isComposing: true}));
+    await element.updateComplete;
+    expect(mockChatSession.sendMessage).not.toHaveBeenCalled();
+    expect(textarea.value).toBe('正在输入');
+  });
+
+  it('disables Send for empty or whitespace drafts and enables it for a question', async () => {
+    mockModelLoader.engine = {} as NonNullable<ModelLoaderService['engine']>;
+    element.requestUpdate();
+    await element.updateComplete;
+    const textarea = element.shadowRoot!.querySelector<HTMLTextAreaElement>('#chat-input')!;
+    const send = element.shadowRoot!.querySelector<HTMLButtonElement>('#btn-send')!;
+    expect(send.textContent).toContain('Send');
+    expect(send.disabled).toBeTrue();
+    send.click();
+    textarea.value = ' \n\t ';
+    textarea.dispatchEvent(new Event('input'));
+    await element.updateComplete;
+    expect(send.disabled).toBeTrue();
+    textarea.dispatchEvent(new KeyboardEvent('keydown', {key: 'Enter'}));
+    expect(mockChatSession.sendMessage).not.toHaveBeenCalled();
+    textarea.value = 'A question';
+    textarea.dispatchEvent(new Event('input'));
+    await element.updateComplete;
+    expect(send.disabled).toBeFalse();
+    send.click();
+    await new Promise(resolve => setTimeout(resolve, 0));
+    await element.updateComplete;
+    expect(mockChatSession.sendMessage).toHaveBeenCalledWith('A question');
+    expect(textarea.value).toBe('');
+    expect(send.disabled).toBeTrue();
+  });
+
+  it('offers Load model without a draft and Load model and send with a draft', async () => {
+    const textarea = element.shadowRoot!.querySelector<HTMLTextAreaElement>('#chat-input')!;
+    const send = element.shadowRoot!.querySelector<HTMLButtonElement>('#btn-send')!;
+    expect(send.textContent).toContain('Load model');
+    expect(send.textContent).not.toContain('and send');
+    expect(send.disabled).toBeFalse();
+    textarea.dispatchEvent(new KeyboardEvent('keydown', {key: 'Enter'}));
+    expect(mockModelLoader.loadModelWeights).not.toHaveBeenCalled();
+    send.click();
+    expect(mockModelLoader.loadModelWeights).toHaveBeenCalledTimes(1);
+    expect(mockChatSession.sendMessage).not.toHaveBeenCalled();
+    textarea.value = 'First question';
+    textarea.dispatchEvent(new Event('input'));
+    await element.updateComplete;
+    expect(send.textContent).toContain('Load model and send');
+    expect(send.disabled).toBeFalse();
+    send.click();
+    await new Promise(resolve => setTimeout(resolve, 0));
+    await element.updateComplete;
+    expect(mockChatSession.sendMessage).toHaveBeenCalledWith('First question');
+    expect(send.textContent).not.toContain('and send');
+    expect(send.disabled).toBeFalse();
+    textarea.value = ' \n\t ';
+    textarea.dispatchEvent(new Event('input'));
+    await element.updateComplete;
+    expect(send.textContent).not.toContain('and send');
+    expect(send.disabled).toBeFalse();
+    textarea.value = '';
+    textarea.dispatchEvent(new Event('input'));
+    await element.updateComplete;
+    expect(send.disabled).toBeFalse();
+    mockModelLoader.engine = {} as NonNullable<ModelLoaderService['engine']>;
+    element.requestUpdate();
+    await element.updateComplete;
+    expect(send.textContent).toContain('Send');
+    expect(send.disabled).toBeTrue();
+  });
+
   it('handles edit-prompt event', async () => {
     // Add a message to render a bubble
     mockChatSession.messages = [
@@ -213,7 +351,7 @@ describe('litert-chat-window', () => {
     element.requestUpdate();
     await element.updateComplete;
 
-    const bubble = element.shadowRoot!.querySelector('litert-chat-bubble');
+    const bubble = element.shadowRoot!.querySelector('document-chat-bubble');
     expect(bubble).toBeTruthy();
 
     const textarea = element.shadowRoot!.querySelector('#chat-input') as HTMLTextAreaElement;

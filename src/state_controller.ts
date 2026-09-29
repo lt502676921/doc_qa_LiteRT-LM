@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+import {storageKey} from './services/browser_state.js';
 import {ReactiveController, ReactiveControllerHost} from 'lit';
 
 import {ChatSessionStore, ConversationMeta, StoredMessage} from './stores/chat_session_store.js';
@@ -24,7 +25,7 @@ import {SettingsStore} from './stores/settings_store.js';
 export type {ConversationMeta, StoredMessage};
 
 /**
- * UI specific orchestrator state controller for the LiteRT-LM Chat
+ * UI state controller for the Doc Q&A
  * application.
  */
 export class LlmChatStateController implements ReactiveController {
@@ -94,7 +95,7 @@ export class LlmChatStateController implements ReactiveController {
     // Triggered automatically when the Lit Element mounts.
     void this.modelLoader.updateCacheSize();
 
-    const activeId = window.localStorage.getItem('litertlm-active-conv-id');
+    const activeId = window.localStorage.getItem(storageKey('active-conv-id'));
     if (activeId &&
         this.chatSession.conversationsList.some(c => c.id === activeId)) {
       void this.chatSession.selectConversation(activeId);
@@ -112,7 +113,7 @@ export class LlmChatStateController implements ReactiveController {
       try {
         this.modelLoader.engine.delete();
       } catch (e) {
-        console.error('[LiteRT-LM] Failed to delete engine:', e);
+        console.error('[Doc Q&A] Failed to delete engine:', e);
       }
       this.modelLoader.engine = null;
     }

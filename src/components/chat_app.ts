@@ -16,8 +16,9 @@
 
 import './sidebar_drawer';
 import './chat_window';
+import './document_preview';
 
-import { css, html, LitElement } from 'lit';
+import { html, LitElement } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
 import { marked } from 'marked';
 
@@ -26,17 +27,21 @@ import {
   parseDocumentFile,
 } from '../services/document_service.js';
 import { LlmChatStateController } from '../state_controller.js';
+import {EXAMPLE_PAPERS, loadExamplePaper} from '../services/example_papers.js';
+import type {SourceCitation} from '../services/citation_service.js';
+import type {DocumentPreview} from './document_preview.js';
 import { sharedStyles } from '../styles/shared_styles.js';
+import { workspaceStyles } from '../styles/workspace_styles.js';
 import { registerAppServiceWorker, renderHtml, setIframeHtml } from './util.js';
 
 /* tslint:disable:no-new-decorators */
 
 /**
  * Main application container for the Document Q&A & Intelligence interface,
- * powered by LiteRT-LM running Gemma 4 on WebGPU.
+ * with local inference on WebGPU.
  */
-@customElement('litert-lm-chat-app')
-export class LitertLmChatApp extends LitElement {
+@customElement('document-qa-app')
+export class DocumentQaApp extends LitElement {
   // Central source of truth state controller
   private state = new LlmChatStateController(this);
 
@@ -45,720 +50,129 @@ export class LitertLmChatApp extends LitElement {
   @property({ type: Boolean }) isPreviewOpen = false;
 
   @state() private isParsingDoc = false;
+  @state() private loadingExample = '';
   @state() private docError: string | null = null;
   @state() private isDraggingOver = false;
 
-  static override styles = [
-    sharedStyles,
-    css`
-      :host {
-        display: flex;
-        flex-direction: column;
-        flex: 1;
-        width: 100%;
-        height: 100%;
-        overflow: hidden;
-        color: var(--ink);
-      }
-
-      /* Topbar Header */
-      .topbar {
-        height: var(--topbar-h);
-        flex: 0 0 var(--topbar-h);
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 1rem;
-        padding: 0 1.25rem;
-        border-bottom: 1px solid var(--line);
-        background: rgba(250, 248, 243, 0.88);
-        backdrop-filter: blur(10px);
-        z-index: 20;
-      }
-
-      .topbar-left {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-      }
-
-      .btn-toggle-sidebar {
-        background: none;
-        border: 1px solid var(--line);
-        color: var(--ink);
-        font-size: 1.15rem;
-        cursor: pointer;
-        padding: 6px 10px;
-        border-radius: 6px;
-        transition: background-color 0.15s, border-color 0.15s;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        line-height: 1;
-      }
-
-      .btn-toggle-sidebar:hover {
-        background-color: rgba(28, 27, 22, 0.06);
-        border-color: var(--accent);
-      }
-
-      .brand-group {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        flex-wrap: nowrap;
-      }
-
-      .brand {
-        margin: 0;
-        font-family: var(--font-serif);
-        font-size: 1.35rem;
-        font-weight: 600;
-        letter-spacing: -0.02em;
-        color: var(--ink);
-        white-space: nowrap;
-      }
-
-      .brand-badge {
-        font-size: 0.68rem;
-        font-family: var(--font-mono);
-        color: var(--accent);
-        background: var(--accent-soft);
-        border: 1px solid rgba(30, 107, 102, 0.25);
-        padding: 2px 8px;
-        border-radius: 999px;
-        font-weight: 600;
-        letter-spacing: 0.02em;
-        white-space: nowrap;
-      }
-
-      .topbar-status-badge {
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-        padding: 2px 10px;
-        height: 24px;
-        box-sizing: border-box;
-        border-radius: 999px;
-        font-size: 0.72rem;
-        font-family: var(--font-mono);
-        color: var(--ink-muted);
-        background: rgba(28, 27, 22, 0.04);
-        border: 1px solid var(--line);
-        cursor: pointer;
-        transition: all 0.15s ease;
-        line-height: 1;
-        user-select: none;
-        max-width: 280px;
-        white-space: nowrap;
-      }
-
-      .topbar-status-badge:hover {
-        background: rgba(28, 27, 22, 0.08);
-        border-color: var(--accent);
-        color: var(--ink);
-      }
-
-      .topbar-status-badge.ready {
-        border-color: rgba(30, 107, 102, 0.3);
-        background: rgba(30, 107, 102, 0.06);
-        color: var(--accent);
-      }
-
-      .topbar-status-badge.loading {
-        border-color: rgba(234, 179, 8, 0.35);
-        background: rgba(234, 179, 8, 0.08);
-        color: #854d0e;
-      }
-
-      .topbar-status-badge.error {
-        border-color: rgba(197, 48, 48, 0.35);
-        background: rgba(197, 48, 48, 0.08);
-        color: #c53030;
-      }
-
-      .topbar-status-dot {
-        width: 7px;
-        height: 7px;
-        border-radius: 50%;
-        background-color: #64748b;
-        flex-shrink: 0;
-      }
-
-      .topbar-status-dot.loading {
-        background-color: #eab308;
-        animation: pulseDot 1.4s infinite;
-      }
-
-      .topbar-status-dot.ready {
-        background-color: var(--accent);
-      }
-
-      .topbar-status-dot.error {
-        background-color: #c53030;
-      }
-
-      .topbar-status-label {
-        font-weight: 600;
-        color: inherit;
-        flex-shrink: 0;
-      }
-
-      .topbar-status-text {
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-      }
-
-      @keyframes pulseDot {
-        0%, 100% { opacity: 0.35; transform: scale(0.85); }
-        50% { opacity: 1; transform: scale(1.15); }
-      }
-
-      .topbar-right {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-      }
-
-      .doc-pill {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        background: var(--surface);
-        border: 1px solid var(--line);
-        padding: 4px 10px;
-        border-radius: 20px;
-        font-size: 0.78rem;
-        max-width: 280px;
-      }
-
-      .doc-pill-name {
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-        font-weight: 600;
-        color: var(--ink);
-      }
-
-      .doc-pill-size {
-        font-size: 0.7rem;
-        color: var(--ink-muted);
-        font-family: var(--font-mono);
-      }
-
-      .btn-close-doc {
-        background: none;
-        border: none;
-        color: var(--ink-muted);
-        cursor: pointer;
-        font-size: 0.85rem;
-        padding: 0 2px;
-        border-radius: 4px;
-        line-height: 1;
-        display: flex;
-        align-items: center;
-      }
-
-      .btn-close-doc:hover {
-        color: #c53030;
-      }
-
-      .file-btn {
-        position: relative;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        padding: 0.45rem 1rem;
-        border-radius: 999px;
-        background: var(--accent);
-        color: #ffffff;
-        font-size: 0.85rem;
-        font-weight: 600;
-        cursor: pointer;
-        transition: background 160ms ease, transform 160ms ease;
-      }
-
-      .file-btn:hover {
-        background: var(--accent-hover);
-      }
-
-      .file-btn:active {
-        transform: translateY(1px);
-      }
-
-      .file-btn input {
-        position: absolute;
-        inset: 0;
-        opacity: 0;
-        cursor: pointer;
-        width: 100%;
-        height: 100%;
-      }
-
-      .file-btn-secondary {
-        background: transparent;
-        color: var(--accent);
-        border: 1.5px solid var(--accent);
-      }
-
-      .file-btn-secondary:hover {
-        background: var(--accent-soft);
-      }
-
-      /* Workspace Split Screen Layout */
-      .workspace {
-        flex: 1;
-        min-height: 0;
-        display: grid;
-        grid-template-columns: minmax(0, 1.35fr) minmax(320px, 1fr);
-        overflow: hidden;
-        position: relative;
-      }
-
-      .pane {
-        min-height: 0;
-        display: flex;
-        flex-direction: column;
-        overflow: hidden;
-      }
-
-      /* Left Pane: Document Reading */
-      .pane-document {
-        border-right: 1px solid var(--line);
-        padding: 1.1rem 1.25rem 1.25rem;
-        background: rgba(255, 253, 248, 0.4);
-      }
-
-      .pane-header {
-        display: flex;
-        align-items: baseline;
-        justify-content: space-between;
-        gap: 0.75rem;
-        margin-bottom: 0.85rem;
-        flex-shrink: 0;
-      }
-
-      .pane-title {
-        margin: 0;
-        font-size: 0.76rem;
-        font-weight: 700;
-        letter-spacing: 0.08em;
-        text-transform: uppercase;
-        color: var(--ink-muted);
-      }
-
-      .pane-meta {
-        margin: 0;
-        font-size: 0.82rem;
-        color: var(--ink-muted);
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        font-family: var(--font-mono);
-      }
-
-      /* Empty State */
-      .empty-state {
-        flex: 1;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        gap: 1rem;
-        text-align: center;
-        color: var(--ink-muted);
-        border: 1.5px dashed var(--line);
-        border-radius: var(--radius);
-        background: rgba(255, 253, 248, 0.6);
-        padding: 2.5rem 1.5rem;
-        transition: border-color 0.2s, background-color 0.2s;
-      }
-
-      .empty-state.dragging {
-        border-color: var(--accent);
-        background: var(--accent-soft);
-      }
-
-      .empty-state p {
-        margin: 0;
-        max-width: 22rem;
-        line-height: 1.5;
-        font-size: 0.95rem;
-      }
-
-      .empty-state-compact {
-        flex: 0 0 auto;
-        min-height: 4.5rem;
-        padding: 1rem;
-      }
-
-      .empty-state-icon {
-        width: 48px;
-        height: 48px;
-        stroke: var(--accent);
-        opacity: 0.8;
-      }
-
-      /* Document Reading Page */
-      .document-scroll {
-        flex: 1;
-        min-height: 0;
-        overflow-y: auto;
-        padding: 0.5rem 0.5rem 1.5rem;
-      }
-
-      .document-page {
-        max-width: 48rem;
-        margin: 0 auto;
-        min-height: 100%;
-        padding: 2.5rem 3rem;
-        background: var(--page);
-        border: 1px solid var(--line);
-        border-radius: 4px;
-        box-shadow: var(--shadow-page);
-        font-family: var(--font-serif);
-        font-size: 1.05rem;
-        line-height: 1.7;
-        animation: fadeIn 280ms ease;
-        overflow-x: auto;
-      }
-
-      .document-page h1,
-      .document-page h2,
-      .document-page h3,
-      .document-page h4 {
-        font-family: var(--font-serif);
-        color: var(--ink);
-        letter-spacing: -0.015em;
-        line-height: 1.3;
-      }
-
-      .document-page h1 {
-        font-size: 1.85rem;
-        margin: 0 0 1rem;
-        border-bottom: 1px solid var(--line);
-        padding-bottom: 0.5rem;
-      }
-
-      .document-page h2 {
-        font-size: 1.35rem;
-        margin: 1.75rem 0 0.75rem;
-      }
-
-      .document-page h3 {
-        font-size: 1.15rem;
-        margin: 1.25rem 0 0.5rem;
-      }
-
-      .document-page p {
-        margin: 0 0 1rem;
-      }
-
-      .document-page table {
-        border-collapse: collapse;
-        width: 100%;
-        margin: 1.25rem 0;
-        font-family: var(--font-sans);
-        font-size: 0.88rem;
-      }
-
-      .document-page th,
-      .document-page td {
-        border: 1px solid var(--line);
-        padding: 0.5rem 0.75rem;
-        text-align: left;
-        vertical-align: top;
-      }
-
-      .document-page th {
-        background-color: rgba(28, 27, 22, 0.04);
-        font-weight: 600;
-      }
-
-      .document-page blockquote {
-        margin: 1.25rem 0;
-        padding: 0.75rem 1.25rem;
-        border-left: 3px solid var(--accent);
-        background: var(--accent-soft);
-        color: var(--ink-muted);
-        font-style: italic;
-      }
-
-      .document-page pre {
-        background: rgba(28, 27, 22, 0.05);
-        border: 1px solid var(--line);
-        border-radius: 6px;
-        padding: 1rem;
-        overflow-x: auto;
-        font-family: var(--font-mono);
-        font-size: 0.88rem;
-        line-height: 1.5;
-      }
-
-      .document-page code {
-        font-family: var(--font-mono);
-        font-size: 0.9em;
-        background: rgba(28, 27, 22, 0.05);
-        padding: 2px 5px;
-        border-radius: 4px;
-      }
-
-      /* Right Pane: AI Tools (Summary + Q&A) */
-      .pane-ai {
-        gap: 0.85rem;
-        padding: 1.1rem 1.25rem 1.25rem;
-        background: rgba(250, 248, 243, 0.65);
-      }
-
-      /* Summary Block */
-      .summary-block {
-        flex: 0 0 auto;
-        display: flex;
-        flex-direction: column;
-        gap: 0.5rem;
-      }
-
-      .summary-header {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-      }
-
-      .btn-summarize {
-        background: none;
-        border: 1px solid var(--accent);
-        color: var(--accent);
-        border-radius: 20px;
-        font-size: 0.72rem;
-        font-weight: 600;
-        padding: 3px 10px;
-        cursor: pointer;
-        transition: all 0.15s;
-        display: inline-flex;
-        align-items: center;
-        gap: 4px;
-      }
-
-      .btn-summarize:hover:not(:disabled) {
-        background: var(--accent);
-        color: #ffffff;
-      }
-
-      .btn-summarize:disabled {
-        opacity: 0.5;
-        cursor: not-allowed;
-      }
-
-      .summary-body {
-        padding: 0.9rem 1.1rem;
-        border-radius: var(--radius);
-        background: var(--surface);
-        border: 1px solid var(--line);
-        font-size: 0.9rem;
-        line-height: 1.6;
-        max-height: 200px;
-        overflow-y: auto;
-        animation: fadeIn 300ms ease;
-      }
-
-      .summary-body p {
-        margin: 0 0 0.65rem;
-      }
-
-      .summary-body p:last-child {
-        margin-bottom: 0;
-      }
-
-      .summary-body ul,
-      .summary-body ol {
-        margin: 0 0 0.65rem;
-        padding-left: 1.25rem;
-      }
-
-      .summary-body li + li {
-        margin-top: 0.25rem;
-      }
-
-      .summary-streaming-indicator {
-        display: inline-block;
-        width: 8px;
-        height: 8px;
-        border-radius: 50%;
-        background-color: var(--accent);
-        margin-left: 4px;
-        animation: pulse 1s infinite;
-      }
-
-      @keyframes pulse {
-        0%, 100% { opacity: 0.2; transform: scale(0.8); }
-        50% { opacity: 1; transform: scale(1.1); }
-      }
-
-      /* Q&A Block */
-      .qa-block {
-        flex: 1;
-        min-height: 0;
-        display: flex;
-        flex-direction: column;
-        overflow: hidden;
-      }
-
-      litert-chat-window {
-        flex: 1;
-        min-height: 0;
-        width: 100%;
-        border: 1px solid var(--line);
-        border-radius: var(--radius);
-        overflow: hidden;
-      }
-
-      /* Collapsible Configurations & Chat History Drawer */
-      .sidebar-overlay {
-        position: fixed;
-        inset: 0;
-        background-color: rgba(28, 27, 22, 0.4);
-        z-index: 999;
-        backdrop-filter: blur(4px);
-        opacity: 0;
-        pointer-events: none;
-        transition: opacity 0.3s ease;
-      }
-
-      .sidebar-overlay.open {
-        opacity: 1;
-        pointer-events: auto;
-      }
-
-      .sidebar {
-        position: fixed;
-        top: 0;
-        left: 0;
-        bottom: 0;
-        width: 320px;
-        max-width: 85vw;
-        height: 100vh;
-        z-index: 1000;
-        background-color: var(--surface);
-        border-right: 1px solid var(--line);
-        padding: 20px;
-        box-sizing: border-box;
-        transform: translateX(-100%);
-        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s ease;
-        display: flex;
-        flex-direction: column;
-        overflow: hidden;
-        box-shadow: none;
-      }
-
-      .sidebar.open {
-        transform: translateX(0);
-        box-shadow: 12px 0 32px rgba(28, 27, 22, 0.15);
-      }
-
-      .drawer-header {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        margin-bottom: 12px;
-        padding-bottom: 8px;
-        border-bottom: 1px solid var(--line);
-      }
-
-      .drawer-title {
-        font-size: 0.85rem;
-        font-weight: 700;
-        text-transform: uppercase;
-        letter-spacing: 0.06em;
-        color: var(--ink-muted);
-        margin: 0;
-      }
-
-      .btn-close-drawer {
-        background: none;
-        border: none;
-        font-size: 1.1rem;
-        color: var(--ink-muted);
-        cursor: pointer;
-        padding: 4px;
-        border-radius: 4px;
-        line-height: 1;
-      }
-
-      .btn-close-drawer:hover {
-        color: var(--ink);
-      }
-
-      litert-sidebar {
-        flex: 1;
-        min-height: 0;
-        overflow: hidden;
-      }
-
-      /* HTML Preview Overlay */
-      .preview-overlay {
-        position: fixed;
-        inset: 0;
-        background-color: rgba(28, 27, 22, 0.8);
-        z-index: 9999;
-        display: flex;
-        flex-direction: column;
-      }
-
-      .preview-overlay iframe {
-        width: 100%;
-        height: 100%;
-        border: none;
-        background-color: #ffffff;
-      }
-
-      .btn-close-preview {
-        position: absolute;
-        top: 16px;
-        right: 24px;
-        background-color: var(--surface);
-        border: 1px solid var(--line);
-        border-radius: 8px;
-        padding: 8px 16px;
-        color: var(--ink);
-        font-weight: 600;
-        font-size: 0.85rem;
-        cursor: pointer;
-        backdrop-filter: blur(4px);
-        z-index: 10000;
-      }
-
-      @keyframes fadeIn {
-        from { opacity: 0; transform: translateY(4px); }
-        to { opacity: 1; transform: translateY(0); }
-      }
-
-      /* Mobile & Tablet Responsive */
-      @media (max-width: 860px) {
-        .workspace {
-          grid-template-columns: 1fr;
-          grid-template-rows: minmax(45vh, auto) minmax(45vh, auto);
-          overflow-y: auto;
-        }
-
-        .pane-document {
-          border-right: none;
-          border-bottom: 1px solid var(--line);
-          min-height: 45vh;
-        }
-
-        .document-page {
-          padding: 1.5rem 1.25rem;
-        }
-
-        .pane-ai {
-          min-height: 45vh;
-        }
-      }
-    `,
-  ];
+  @state() private assistantTab: 'chat' | 'summary' = 'chat';
+  @state() private mobilePane: 'document' | 'assistant' = 'document';
+  @state() private readingWidth = 60;
+  @state() private isGeneralChat = false;
+  private resizing = false;
+  private workspaceObserver?: ResizeObserver;
+  private previousDocumentId: string | null = null;
+
+  static override styles = [sharedStyles, workspaceStyles];
+
+  override willUpdate() {
+    const id = this.state.chatSession.currentDoc?.id || null;
+    if (id !== this.previousDocumentId) {
+      this.assistantTab = 'chat';
+      this.mobilePane = 'document';
+      this.isGeneralChat = false;
+      this.previousDocumentId = id;
+    }
+  }
+
+  private workspaceDimensions() {
+    const workspace = this.renderRoot.querySelector<HTMLElement>('.workspace');
+    if (!workspace) return null;
+    const rect = workspace.getBoundingClientRect();
+    const style = getComputedStyle(workspace);
+    const leftPadding = parseFloat(style.paddingLeft);
+    const width = workspace.clientWidth - leftPadding - parseFloat(style.paddingRight);
+    return {left: rect.left + leftPadding, width};
+  }
+
+  private clampReadingWidth(value: number) {
+    const dimensions = this.workspaceDimensions();
+    if (!dimensions || dimensions.width <= 0) return value;
+    const min = Math.max(30, 360 / dimensions.width * 100);
+    const max = Math.min(72, 100 - 354 / dimensions.width * 100);
+    return Math.min(max, Math.max(min, value));
+  }
+
+  private resizeWorkspace(event: PointerEvent) {
+    if (!this.resizing) return;
+    const dimensions = this.workspaceDimensions();
+    if (dimensions) this.readingWidth = this.clampReadingWidth((event.clientX - dimensions.left) / dimensions.width * 100);
+  }
+
+  private resizeWithKeyboard(event: KeyboardEvent) {
+    const steps: Record<string, number> = {ArrowLeft: -2, ArrowRight: 2};
+    if (event.key in steps) {
+      event.preventDefault();
+      this.readingWidth = this.clampReadingWidth(this.readingWidth + steps[event.key]);
+    } else if (event.key === 'Home') {
+      event.preventDefault(); this.readingWidth = this.clampReadingWidth(60);
+    }
+  }
+
+  private async openRecent(id: string) {
+    this.isGeneralChat = false;
+    await this.state.chatSession.selectConversation(id);
+  }
+
+  private renderWelcome(busy: boolean) {
+    const recent = this.state.chatSession.conversationsList
+      .filter((item, index, items) => item.documentId && items.findIndex(other => other.documentId === item.documentId) === index)
+      .slice(0, 4);
+    return html`<main class="welcome" @dragover=${this.handleDragOver}
+      @dragleave=${this.handleDragLeave} @drop=${this.handleDrop}>
+      <div class="welcome-content">
+        <div class="welcome-heading">
+          <span class="eyebrow"><span class="privacy-dot"></span>Your private reading workspace</span>
+          <h2>A little more clarity. <br>From every document.</h2>
+          <p>Read the original, ask a question, and follow the answer back to its source.</p>
+        </div>
+        <div class="welcome-grid">
+          <section class="upload-card ${this.isDraggingOver ? 'dragging' : ''}" aria-label="Upload a document">
+            <div class="upload-icon">${this.documentIcon()}</div>
+            <h3>${this.isParsingDoc ? 'Opening your document…' : 'Bring a document. Start exploring.'}</h3>
+            <p>${this.isParsingDoc ? 'Preparing the preview and readable text.' : 'Drop a file here, or choose one from your device.'}</p>
+            ${this.isParsingDoc ? html`<span class="loading-bar" role="status" aria-label="Preparing document"></span>` : html`
+              <label class="file-btn">Choose a document <span aria-hidden="true">↗</span>
+                <input aria-label="Choose a document" type="file" ?disabled=${busy}
+                  accept=${ACCEPTED_FILE_TYPES} @change=${this.handleFileChosen}>
+              </label>`}
+            <small>PDF · DOCX · XLSX · PPTX · Markdown</small>
+            ${this.docError ? html`<p class="error-note" role="alert">${this.docError}</p>` : ''}
+          </section>
+          <section class="workflow-card" aria-label="How it works">
+            <span class="eyebrow">From reading to understanding</span>
+            <ol class="workflow-steps">
+              <li><span class="step-number">01</span><div><h3>Keep the original in view</h3><p>Read your document alongside the conversation.</p></div></li>
+              <li><span class="step-number">02</span><div><h3>Ask what matters to you</h3><p>Explore ideas, compare details, or get a summary.</p></div></li>
+              <li><span class="step-number">03</span><div><h3>Check the source</h3><p>Follow cited passages directly into the document.</p></div></li>
+            </ol>
+          </section>
+        </div>
+        <section class="recent-section" aria-label="Recent documents">
+          <div class="section-heading"><h3>Pick up where you left off</h3>
+            <button class="text-button" @click=${this.toggleSidebar}>View history <span aria-hidden="true">↗</span></button>
+          </div>
+          ${recent.length ? html`<div class="recent-grid">${recent.map(item => html`
+            <button class="recent-card" ?disabled=${busy} @click=${() => this.openRecent(item.id)}>
+              <span class="recent-icon">${this.documentIcon()}</span>
+              <span class="recent-copy"><strong>${item.documentName || item.title}</strong><small>${new Date(item.createdAt).toLocaleDateString(undefined, {month: 'short', day: 'numeric'})} · Saved on this device</small></span>
+              <span class="card-arrow" aria-hidden="true">↗</span>
+            </button>`)}</div>` : html`<p class="recent-empty">Your documents and conversations will appear here after you open a file.</p>`}
+        </section>
+        ${this.renderExamples()}
+        <footer class="welcome-footer"><span>Files stay in your browser. Analysis uses readable text.</span>
+          <button class="text-button" @click=${() => {this.isGeneralChat = true; this.mobilePane = 'assistant';}}>Chat without a document →</button>
+        </footer>
+      </div>
+    </main>`;
+  }
+
+  private documentIcon() {
+    return html`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path><path d="M14 3v6h6M8 13h8M8 17h5"></path></svg>`;
+  }
 
   override firstUpdated() {
+    this.workspaceObserver = new ResizeObserver(() => this.requestUpdate());
+    this.workspaceObserver.observe(this);
     if ('serviceWorker' in navigator) {
       registerAppServiceWorker(navigator.serviceWorker)
         .then((reg) =>
@@ -768,6 +182,18 @@ export class LitertLmChatApp extends LitElement {
           console.error('[PWA] Service Worker registration failed:', err)
         );
     }
+  }
+
+  override updated() {
+    if (matchMedia('(min-width: 861px)').matches) {
+      const width = this.clampReadingWidth(this.readingWidth);
+      if (Math.abs(width - this.readingWidth) > .05) this.readingWidth = width;
+    }
+  }
+
+  override disconnectedCallback() {
+    super.disconnectedCallback();
+    this.workspaceObserver?.disconnect();
   }
 
   private toggleSidebar() {
@@ -783,7 +209,8 @@ export class LitertLmChatApp extends LitElement {
     await this.processSelectedFile(file);
   }
 
-  private async processSelectedFile(file: File) {
+  private async processSelectedFile(file: File, reserved = false) {
+    if (this.state.chatSession.isBusy || (!reserved && this.isParsingDoc)) return;
     this.isParsingDoc = true;
     this.docError = null;
 
@@ -791,14 +218,54 @@ export class LitertLmChatApp extends LitElement {
       const parsedDoc = await parseDocumentFile(file);
       await this.state.chatSession.setDocument(parsedDoc);
 
-      // Auto-trigger executive summary after document parse
-      void this.state.chatSession.summarizeDocument();
     } catch (err: unknown) {
-      console.error('[LiteRT-LM] Failed to parse document:', err);
+      console.error('[Doc Q&A] Failed to parse document:', err);
       this.docError = (err as Error).message || 'Failed to parse file';
     } finally {
       this.isParsingDoc = false;
     }
+  }
+
+  private async selectExample(id: string) {
+    if (this.isParsingDoc || this.state.chatSession.isBusy) return;
+    this.isParsingDoc = true; this.loadingExample = id; this.docError = null;
+    try {await this.processSelectedFile(await loadExamplePaper(id), true);}
+    catch (error) {this.docError = (error as Error).message;}
+    finally {this.isParsingDoc = false; this.loadingExample = '';}
+  }
+
+  private async selectSource(event: CustomEvent<SourceCitation>) {
+    const citation = event.detail;
+    if (citation.documentId !== this.state.chatSession.currentDoc?.id) return;
+    await this.updateComplete;
+    if (citation.documentId !== this.state.chatSession.currentDoc?.id) return;
+    this.mobilePane = 'document';
+    await this.updateComplete;
+    const viewer = this.renderRoot.querySelector<DocumentPreview>('document-preview');
+    await viewer?.revealSource(citation.id);
+  }
+
+  private handleSummaryCitation(event: MouseEvent) {
+    const link = (event.target as Element).closest('a[href^="#source-"]');
+    if (!link) return;
+    event.preventDefault();
+    const id = link.getAttribute('href')!.slice('#source-'.length);
+    const citation = this.state.chatSession.summaryCitations.find(item => item.id === id);
+    if (citation) void this.selectSource(new CustomEvent('source-selected', {detail: citation}));
+  }
+
+  private renderExamples(compact = false) {
+    return html`<div class="example-library ${compact ? 'compact' : ''}" aria-label="Built-in documents">
+      <div class="section-heading"><h3>${compact ? 'Open an example' : 'Or explore something interesting'}</h3>${compact ? '' : html`<span class="section-caption">Five papers. Plenty of ideas.</span>`}</div>
+      <div class="example-grid">${EXAMPLE_PAPERS.map(paper => html`
+        <button class="example-card" ?disabled=${this.isParsingDoc || this.state.chatSession.isBusy}
+          @click=${() => this.selectExample(paper.id)}>
+          <span class="example-type">PDF <span aria-hidden="true">↗</span></span>
+          <strong>${this.loadingExample === paper.id ? 'Loading…' : paper.title}</strong>
+          <span>${paper.year} · ${paper.pages} pages</span>
+          ${compact ? '' : html`<small>${paper.description}</small>`}
+        </button>`)}</div>
+    </div>`;
   }
 
   private handleDragOver(e: DragEvent) {
@@ -808,6 +275,7 @@ export class LitertLmChatApp extends LitElement {
 
   private handleDragLeave(e: DragEvent) {
     e.preventDefault();
+    if (e.relatedTarget instanceof Node && this.renderRoot.contains(e.relatedTarget)) return;
     this.isDraggingOver = false;
   }
 
@@ -821,6 +289,7 @@ export class LitertLmChatApp extends LitElement {
   }
 
   private async handleCloseDoc() {
+    this.isGeneralChat = false;
     await this.state.chatSession.clearDocument();
   }
 
@@ -837,7 +306,7 @@ export class LitertLmChatApp extends LitElement {
         this.isPreviewOpen = true;
       }
     } catch (err) {
-      console.error('[LiteRT-LM] Failed to decode HTML content:', err);
+      console.error('[Doc Q&A] Failed to decode HTML content:', err);
     }
   }
 
@@ -852,290 +321,133 @@ export class LitertLmChatApp extends LitElement {
   }
 
   override render() {
-    const currentDoc = this.state.chatSession.currentDoc;
-    const isSummarizing = this.state.chatSession.isSummarizing;
-    const isGenerating = this.state.chatSession.isGenerating;
+    const chat = this.state.chatSession;
+    const currentDoc = chat.currentDoc;
+    const isSummarizing = chat.isSummarizing;
     const isModelLoading = this.state.modelLoader.isModelLoading;
-    const isReady = !!this.state.modelLoader.engine;
-    const isError =
-      this.state.statusText.toLowerCase().includes('failed') ||
-      this.state.statusText.toLowerCase().includes('error');
-
-    let statusType = 'idle';
-    if (isError) {
-      statusType = 'error';
-    } else if (isModelLoading || isGenerating || isSummarizing) {
-      statusType = 'loading';
-    } else if (isReady) {
-      statusType = 'ready';
-    }
-
-    const summaryText = this.state.chatSession.summaryText;
+    const busy = chat.isBusy || this.isParsingDoc || isModelLoading;
+    const plan = chat.contextPreview;
+    const percentage = Math.min(100, Math.round(100 * (plan.inputTokens + plan.outputReserve + plan.margin) / plan.limit));
+    const isError = /failed|error/i.test(this.state.statusText);
+    const statusType = isError ? 'error' : busy ? 'loading' : this.state.modelLoader.engine ? 'ready' : 'idle';
+    const statusLabel = isError ? 'Needs attention' : this.isParsingDoc ? 'Opening document' : chat.isRestoring ? 'Restoring' :
+      isModelLoading ? 'Loading model' : isSummarizing ? 'Summarizing' : chat.isGenerating ? 'Answering' :
+      this.state.modelLoader.engine ? 'Model ready' : 'Local workspace';
+    const summaryText = chat.summaryText;
+    const welcome = !currentDoc && !chat.missingDocument && !chat.messages.length && !this.isGeneralChat;
 
     return html`
-      <!-- Left Drawer Overlay & Panel -->
-      <div
-        class="sidebar-overlay ${this.isSidebarOpen ? 'open' : ''}"
-        @click=${this.toggleSidebar}
-      ></div>
-
-      <aside class="sidebar ${this.isSidebarOpen ? 'open' : ''}">
-        <div class="drawer-header">
-          <h2 class="drawer-title">Model &amp; Chat History</h2>
-          <button
-            class="btn-close-drawer"
-            aria-label="Close Drawer"
-            @click=${this.toggleSidebar}
-          >
-            ✕
-          </button>
-        </div>
-        <litert-sidebar
-          .state=${this.state}
-          @close=${this.toggleSidebar}
-        ></litert-sidebar>
+      <div class="sidebar-overlay ${this.isSidebarOpen ? 'open' : ''}" @click=${this.toggleSidebar}></div>
+      <aside class="sidebar ${this.isSidebarOpen ? 'open' : ''}" ?inert=${!this.isSidebarOpen} aria-label="History and settings">
+        <div class="drawer-header"><h2 class="drawer-title">History &amp; settings</h2>
+          <button class="icon-button" aria-label="Close Drawer" @click=${this.toggleSidebar}>✕</button></div>
+        <document-sidebar style=${busy ? 'pointer-events:none;opacity:0.6' : ''} .state=${this.state}
+          @new-workspace=${() => {this.isGeneralChat = false; this.assistantTab = 'chat'; this.mobilePane = 'document';}}
+          @close=${() => this.isSidebarOpen = false}></document-sidebar>
       </aside>
-
-      <!-- Top Header Navigation -->
       <header class="topbar">
         <div class="topbar-left">
-          <button
-            id="btn-toggle-sidebar"
-            class="btn-toggle-sidebar"
-            aria-label="Toggle Menu"
-            title="Model Status, Parameters & Chat History"
-            @click=${this.toggleSidebar}
-          >
-            ☰
+          <button id="btn-toggle-sidebar" class="icon-button" aria-label="Toggle Menu" title="History and settings"
+            aria-expanded=${this.isSidebarOpen} @click=${this.toggleSidebar}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="3"></rect><path d="M9 4v16"></path></svg>
           </button>
-          <div class="brand-group">
-            <h1 class="brand">Doc Q&amp;A</h1>
-            <span class="brand-badge">Gemma 4 E4B · WebGPU</span>
-            <div
-              class="topbar-status-badge ${statusType}"
-              title="Status: ${this.state.statusText} (Click to open drawer)"
-              @click=${this.toggleSidebar}
-            >
-              <span class="topbar-status-dot ${statusType}"></span>
-              <span class="topbar-status-label">Status:</span>
-              <span class="topbar-status-text">${this.state.statusText}</span>
-            </div>
-          </div>
+          <div class="brand-group"><h1 class="brand">Doc Q&amp;A<span class="brand-dot">.</span></h1><span class="brand-divider"></span><span class="brand-description">Read with understanding</span></div>
         </div>
-
         <div class="topbar-right">
-          ${currentDoc
-            ? html`
-                <div class="doc-pill" title="${currentDoc.name}">
-                  <span class="doc-pill-name">${currentDoc.name}</span>
-                  <span class="doc-pill-size"
-                    >${(currentDoc.size / 1024).toFixed(0)} KB</span
-                  >
-                  <button
-                    class="btn-close-doc"
-                    title="Close document"
-                    @click=${this.handleCloseDoc}
-                  >
-                    ✕
-                  </button>
-                </div>
-              `
-            : ''}
-
-          <label class="file-btn">
-            Choose file…
-            <input
-              type="file"
-              accept=${ACCEPTED_FILE_TYPES}
-              @change=${this.handleFileChosen}
-            />
-          </label>
+          <button class="topbar-status-badge ${statusType}" title=${this.state.statusText} @click=${this.toggleSidebar}>
+            <span class="topbar-status-dot ${statusType}"></span><span>${statusLabel}</span></button>
+          ${!welcome ? html`<label class="file-btn file-btn-secondary">Open document
+            <input aria-label="Open document" type="file" ?disabled=${busy} accept=${ACCEPTED_FILE_TYPES} @change=${this.handleFileChosen}>
+          </label>` : ''}
         </div>
       </header>
-
-      <!-- Main Split Workspace -->
-      <main class="workspace">
-        <!-- Left Pane: Document Preview -->
-        <section
-          class="pane pane-document"
-          aria-label="Document Preview"
-          @dragover=${this.handleDragOver}
-          @dragleave=${this.handleDragLeave}
-          @drop=${this.handleDrop}
-        >
-          <div class="pane-header">
-            <h2 class="pane-title">Document</h2>
-            ${currentDoc
-              ? html`
-                  <p class="pane-meta">
-                    ${currentDoc.extension.toUpperCase()} ·
-                    ~${currentDoc.wordCount.toLocaleString()} words
-                  </p>
-                `
-              : ''}
-          </div>
-
-          ${this.isParsingDoc
-            ? html`
-                <div class="empty-state">
-                  <div
-                    class="summary-streaming-indicator"
-                    style="width: 16px; height: 16px;"
-                  ></div>
-                  <p>Parsing and extracting document content...</p>
-                </div>
-              `
-            : this.docError
-            ? html`
-                <div class="empty-state" style="border-color: #c53030;">
-                  <p style="color: #c53030; font-weight: 600;">
-                    ${this.docError}
-                  </p>
-                  <label class="file-btn file-btn-secondary">
-                    Try another file…
-                    <input
-                      type="file"
-                      accept=${ACCEPTED_FILE_TYPES}
-                      @change=${this.handleFileChosen}
-                    />
-                  </label>
-                </div>
-              `
-            : !currentDoc
-            ? html`
-                <div
-                  class="empty-state ${this.isDraggingOver ? 'dragging' : ''}"
-                >
-                  <svg
-                    class="empty-state-icon"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="1.75"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                  >
-                    <path
-                      d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"
-                    ></path>
-                    <polyline points="14 2 14 8 20 8"></polyline>
-                    <line x1="12" y1="18" x2="12" y2="12"></line>
-                    <line x1="9" y1="15" x2="15" y2="15"></line>
-                  </svg>
-                  <p>
-                    Select or drag &amp; drop a PDF, DOCX, XLSX, PPTX, or Markdown file to preview it here.
-                  </p>
-                  <label class="file-btn file-btn-secondary">
-                    Choose file…
-                    <input
-                      type="file"
-                      accept=${ACCEPTED_FILE_TYPES}
-                      @change=${this.handleFileChosen}
-                    />
-                  </label>
-                </div>
-              `
-            : html`
-                <div class="document-scroll">
-                  <article class="document-page">
-                    ${renderHtml(currentDoc.html)}
-                  </article>
-                </div>
-              `}
-        </section>
-
-        <!-- Right Pane: AI Tools (Summary & Q&A) -->
-        <aside class="pane pane-ai" aria-label="AI Tools">
-          <!-- Executive Summary Section -->
-          <div class="summary-block">
-            <div class="summary-header">
-              <h2 class="pane-title">Summary</h2>
-              ${currentDoc
-                ? html`
-                    <button
-                      class="btn-summarize"
-                      ?disabled=${isSummarizing}
-                      @click=${() =>
-                        this.state.chatSession.summarizeDocument()}
-                    >
-                      ${isSummarizing
-                        ? html`Generating...
-                            <span class="summary-streaming-indicator"></span>`
-                        : summaryText
-                        ? '⟳ Regenerate'
-                        : '✨ Summarize'}
-                    </button>
-                  `
-                : ''}
+      ${welcome ? this.renderWelcome(busy) : html`
+        <nav class="mobile-switch" aria-label="Workspace view">
+          <button aria-pressed=${this.mobilePane === 'document'} @click=${() => this.mobilePane = 'document'}>Document</button>
+          <button aria-pressed=${this.mobilePane === 'assistant'} @click=${() => this.mobilePane = 'assistant'}>Assistant</button>
+        </nav>
+        <main class="workspace ${this.resizing ? 'resizing' : ''}" style=${`--reading-width: ${this.readingWidth}%`}>
+          <section class="pane pane-document ${this.mobilePane === 'document' ? 'mobile-active' : ''}" aria-label="Document Preview"
+            @dragover=${this.handleDragOver} @dragleave=${this.handleDragLeave} @drop=${this.handleDrop}>
+            <div class="pane-header"><div class="document-heading"><span class="document-symbol">${this.documentIcon()}</span>
+              <div><h2 class="document-name" title=${currentDoc?.name || 'Document'}>${currentDoc?.name || 'Your document'}</h2>
+                <p class="pane-meta">${currentDoc ? `${currentDoc.extension.toUpperCase()} · ${currentDoc.units.length} ${currentDoc.extension === 'pdf' ? 'pages' : 'sections'}` : 'Open a file to read alongside your conversation'}</p></div></div>
+              ${currentDoc ? html`<button class="icon-button" aria-label="Close document" title="Close document" ?disabled=${busy} @click=${this.handleCloseDoc}>✕</button>` : ''}
             </div>
-
-            ${!currentDoc
-              ? html`
-                  <div class="empty-state empty-state-compact">
-                    <p style="font-size: 0.85rem;">
-                      A summary of the selected document will appear here.
-                    </p>
-                  </div>
-                `
-              : isSummarizing && !summaryText
-              ? html`
-                  <div class="summary-body" style="font-style: italic; color: var(--ink-muted);">
-                    Analyzing document and generating executive summary with Gemma 4 E4B...
-                    <span class="summary-streaming-indicator"></span>
-                  </div>
-                `
-              : summaryText
-              ? html`
-                  <div class="summary-body">
-                    ${renderHtml(marked.parse(summaryText, { async: false }) as string)}
-                    ${isSummarizing
-                      ? html`<span class="summary-streaming-indicator"></span>`
-                      : ''}
-                  </div>
-                `
-              : html`
-                  <div class="empty-state empty-state-compact">
-                    <p style="font-size: 0.85rem;">
-                      Click <b>✨ Summarize</b> to generate an executive overview.
-                    </p>
-                  </div>
-                `}
-          </div>
-
-          <!-- Document Q&A Section -->
-          <div class="qa-block">
-            <div class="pane-header" style="margin-bottom: 0.5rem;">
-              <h2 class="pane-title">Ask about this document</h2>
+            ${this.docError ? html`<p class="error-note" role="alert">${this.docError}</p>` : ''}
+            ${this.isParsingDoc ? html`<div class="document-empty"><span class="loading-bar" role="status" aria-label="Preparing document"></span><p>Opening your document…</p></div>` : currentDoc ? html`
+              <document-preview .document=${currentDoc} .scope=${chat.scope} .busy=${busy}
+                @scope-changed=${(event: CustomEvent<string | null>) => chat.setScope(event.detail)}></document-preview>
+              <p class="document-footnote">${currentDoc.unreadableUnits.length ? html`<span class="error-note">No readable text: ${currentDoc.unreadableUnits.join(', ')}.</span>` : 'Analysis uses readable text; images and scanned pages are not interpreted.'}</p>
+            ` : html`<div class="document-empty ${this.isDraggingOver ? 'dragging' : ''}">${this.documentIcon()}<h3>A place for your source</h3><p>Open a document to keep its original text beside the answers.</p>
+              <label class="file-btn">Choose a document<input aria-label="Choose a document" type="file" ?disabled=${busy} accept=${ACCEPTED_FILE_TYPES} @change=${this.handleFileChosen}></label>
+              <details class="inline-examples"><summary>Explore an example instead</summary>${this.renderExamples(true)}</details></div>`}
+          </section>
+          <div class="splitter" role="separator" aria-label="Resize document and assistant panes" aria-orientation="vertical" tabindex="0"
+            aria-valuenow=${Math.round(this.readingWidth)} aria-valuemin="30" aria-valuemax="72"
+            @pointerdown=${(event: PointerEvent) => {if (event.button !== 0) return; this.resizing = true; (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId); event.preventDefault();}}
+            @pointermove=${this.resizeWorkspace} @pointerup=${() => {this.resizing = false;}}
+            @pointercancel=${() => {this.resizing = false;}} @lostpointercapture=${() => {this.resizing = false;}}
+            @keydown=${this.resizeWithKeyboard}><span></span></div>
+          <aside class="pane pane-ai ${this.mobilePane === 'assistant' ? 'mobile-active' : ''}" aria-label="AI Tools">
+            <div class="assistant-header">
+              <h2>Find the thread.</h2>
+              <div class="assistant-tabs" role="tablist" aria-label="Assistant tools">
+              <button id="chat-tab" role="tab" aria-selected=${this.assistantTab === 'chat'} aria-controls="chat-panel" tabindex=${this.assistantTab === 'chat' ? 0 : -1}
+                @click=${() => this.assistantTab = 'chat'} @keydown=${this.handleTabKey}>Ask a question</button>
+              <button id="summary-tab" role="tab" aria-selected=${this.assistantTab === 'summary'} aria-controls="summary-panel" tabindex=${this.assistantTab === 'summary' ? 0 : -1}
+                @click=${() => this.assistantTab = 'summary'} @keydown=${this.handleTabKey}>Summary${isSummarizing ? html`<span class="summary-streaming-indicator"></span>` : ''}</button>
+              </div>
             </div>
-            <litert-chat-window
-              .state=${this.state}
-              @preview-html=${this.handlePreviewHtml}
-            ></litert-chat-window>
-          </div>
-        </aside>
-      </main>
-
-      <!-- Fullscreen HTML Preview Overlay (if triggered) -->
-      <div
-        id="preview-overlay"
-        class="preview-overlay"
-        style="display: ${this.isPreviewOpen ? 'flex' : 'none'};"
-      >
-        <button
-          id="btn-close-preview"
-          class="btn-close-preview"
-          @click=${this.closePreview}
-        >
-          Exit Preview ✕
-        </button>
-        <iframe id="preview-iframe" sandbox="allow-scripts"></iframe>
-      </div>
-    `;
+            ${currentDoc || chat.missingDocument ? html`
+              <details class="context-panel ${plan.error || chat.missingDocument ? 'context-warning' : ''}" ?open=${!!plan.error || chat.missingDocument}>
+                <summary><span class="context-dot"></span><span>${plan.error ? 'Reading limit needs attention' : chat.missingDocument ? 'Reopen your document' : plan.mode === 'relevant' ? 'Reading relevant excerpts' : chat.scope ? chat.readingScopeLabel : 'Reading the full document'}</span><span class="context-percent" aria-hidden="true">⌄</span></summary>
+                <div class="context-details"><div class="context-heading"><strong>Context usage</strong><span>~${plan.inputTokens.toLocaleString()} / ${plan.limit.toLocaleString()}</span></div>
+                  <progress max="100" value=${percentage} aria-label="Estimated context including reserves"></progress>
+                  <small>Includes ${plan.outputReserve.toLocaleString()} tokens for the answer and ${plan.margin.toLocaleString()} safety margin.${chat.actualContextTokens !== null ? html` Last measured: ${chat.actualContextTokens.toLocaleString()} tokens.` : ''}</small>
+                  ${plan.error ? html`<p class="error-note" role="alert">${plan.error}</p>` : ''}
+                  ${chat.missingDocument ? html`<p class="error-note" role="alert">Reopen the original document to continue this saved chat.</p>` : ''}
+                  ${plan.mode === 'relevant' ? html`<small>Use original-language keywords or select a page for precise coverage.</small>` : ''}</div>
+              </details>` : ''}
+            <div id="chat-panel" class="qa-block" role="tabpanel" aria-labelledby="chat-tab" ?hidden=${this.assistantTab !== 'chat'}>
+              <document-chat-window .state=${this.state} .documentLoading=${this.isParsingDoc}
+                @preview-html=${this.handlePreviewHtml} @source-selected=${this.selectSource}></document-chat-window>
+            </div>
+            <section id="summary-panel" class="summary-block" role="tabpanel" aria-labelledby="summary-tab" ?hidden=${this.assistantTab !== 'summary'}>
+              <div class="summary-header"><h3>At a glance</h3>${currentDoc ? html`
+                <button class="btn btn-primary btn-summarize" ?disabled=${busy} @click=${() => chat.summarizeDocument()}>
+                  ${isSummarizing ? 'Generating…' : summaryText ? 'Regenerate' : 'Generate summary'}</button>` : ''}</div>
+              <div class="summary-scroll">
+                ${summaryText ? html`<div class="summary-body"><div @click=${this.handleSummaryCitation}>${renderHtml(marked.parse(chat.summaryMarkdown, {async: false}) as string)}</div>
+                  <div class="source-links">${chat.summaryCitations.map(citation => html`<button title=${citation.excerpt} @click=${() => this.selectSource(new CustomEvent('source-selected', {detail: citation}))}>${citation.id} · ${citation.label}</button>`)}</div>
+                  ${chat.summaryInvalidCitations.length ? html`<small class="error-note">Unrecognized references: ${chat.summaryInvalidCitations.join(', ')}</small>` : ''}
+                  ${!isSummarizing && !chat.summaryCitations.length ? html`<small>No source references were provided. Check the summary against the document.</small>` : ''}
+                  ${isSummarizing ? html`<span class="summary-streaming-indicator"></span>` : ''}</div>` : html`
+                    <div class="summary-empty"><span class="summary-illustration" aria-hidden="true">≡</span><h3>${isSummarizing ? 'Connecting the main ideas…' : 'The bigger picture, in a few words.'}</h3>
+                      <p>${!currentDoc ? 'Open a document to get an overview of its main ideas.' : isSummarizing ? 'Your summary will appear here as it is generated.' : 'Generate an overview, then follow the references to explore the details.'}</p></div>`}
+                ${chat.summaryProgress ? html`<p class="text-note" role="status">${chat.summaryProgress}</p>` : ''}
+              </div>
+              ${isSummarizing ? html`<button class="btn btn-secondary" @click=${() => chat.cancelGeneration()}>Stop summary</button>` : ''}
+            </section>
+          </aside>
+        </main>`}
+      <div id="preview-overlay" class="preview-overlay" style=${`display: ${this.isPreviewOpen ? 'flex' : 'none'};`}>
+        <button id="btn-close-preview" class="btn-close-preview" @click=${this.closePreview}>Exit Preview ✕</button>
+        <iframe id="preview-iframe" title="Generated HTML preview" sandbox="allow-scripts"></iframe>
+      </div>`;
   }
+
+  private handleTabKey(event: KeyboardEvent) {
+    if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+    event.preventDefault();
+    this.assistantTab = event.key === 'Home' ? 'chat' : event.key === 'End' ? 'summary' : this.assistantTab === 'chat' ? 'summary' : 'chat';
+    void this.updateComplete.then(() => this.renderRoot.querySelector<HTMLButtonElement>(`#${this.assistantTab}-tab`)?.focus());
+  }
+
 }
 
 declare global {
   interface HTMLElementTagNameMap {
-    'litert-lm-chat-app': LitertLmChatApp;
+    'document-qa-app': DocumentQaApp;
   }
 }

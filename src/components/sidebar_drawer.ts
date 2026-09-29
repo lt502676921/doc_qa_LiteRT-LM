@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+import {storageKey} from '../services/browser_state.js';
 import { css, html, LitElement } from 'lit';
 import { customElement, property, query } from 'lit/decorators.js';
 
@@ -27,8 +28,8 @@ import type { CustomDropdown } from './custom_dropdown.js';
 /* tslint:disable:no-new-decorators */
 
 /** Component representing the sidebar drawer. */
-@customElement('litert-sidebar')
-export class LitertSidebar extends LitElement {
+@customElement('document-sidebar')
+export class DocumentSidebar extends LitElement {
   @property({ type: Object })
   state!: LlmChatStateController;
 
@@ -49,8 +50,8 @@ export class LitertSidebar extends LitElement {
       .section-title {
         font-size: 0.875rem;
         font-weight: 700;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
+        text-transform: none;
+        letter-spacing: 0;
         color: var(--accent);
         margin: 0 0 12px 0;
         border-bottom: 1px solid var(--border);
@@ -154,7 +155,7 @@ export class LitertSidebar extends LitElement {
         padding: 8px 10px;
         border-radius: 8px;
         cursor: pointer;
-        font-size: 0.78rem;
+        font-size: 0.875rem;
         color: var(--text-muted);
         transition: background-color 0.15s, color 0.15s, border-color 0.15s;
         user-select: none;
@@ -165,13 +166,13 @@ export class LitertSidebar extends LitElement {
         color: var(--ink);
       }
       .conv-item.active {
-        background-color: var(--accent);
-        color: #ffffff !important;
-        font-weight: bold;
+        background-color: var(--accent-soft);
+        color: var(--accent) !important;
+        font-weight: 600;
       }
       .conv-item.active:hover {
-        background-color: var(--accent-hover) !important;
-        color: #ffffff !important;
+        background-color: var(--accent-soft) !important;
+        color: var(--accent) !important;
         cursor: default;
       }
       .new-chat-item {
@@ -184,12 +185,8 @@ export class LitertSidebar extends LitElement {
         background-color: var(--accent-soft) !important;
         color: var(--accent) !important;
       }
-        font-weight: bold;
-      }
-      .new-chat-item:not(.active):hover {
-        background-color: rgba(45, 212, 191, 0.08) !important;
-        color: var(--teal) !important;
-      }
+      button.new-chat-item { width:100%; font-family:inherit; background:var(--surface); justify-content:flex-start; text-align:left; }
+      .conv-open { display:flex; align-items:center; min-width:0; flex:1; padding:4px 0; border:0; background:transparent; font:inherit; color:inherit; text-align:left; cursor:pointer; }
       .conv-title {
         flex: 1;
         overflow: hidden;
@@ -282,7 +279,7 @@ export class LitertSidebar extends LitElement {
     return path.includes('gemma-4-26B') || path.includes('gemma-4-31B');
   }
 
-  private readonly LARGE_MODEL_WARNING_KEY = 'litertlm-large-model-warning-dismissed';
+  private readonly LARGE_MODEL_WARNING_KEY = storageKey('large-model-warning-dismissed');
 
   private hasDismissedWarning(): boolean {
     return window.localStorage.getItem(this.LARGE_MODEL_WARNING_KEY) === 'true';
@@ -355,7 +352,7 @@ export class LitertSidebar extends LitElement {
               await this.state.chatSession.createConversationSession();
             });
         } catch (e) {
-          console.error('[LiteRT-LM] Failed to import/load custom model:', e);
+          console.error('[Doc Q&A] Failed to import/load custom model:', e);
         }
       }
     };
@@ -402,7 +399,7 @@ export class LitertSidebar extends LitElement {
       Object.assign(this.state.settings, parseResult.data);
       this.state.settings.saveSettings();
     } else {
-      console.warn('[LiteRT-LM] Invalid settings input:', parseResult.error);
+      console.warn('[Doc Q&A] Invalid settings input:', parseResult.error);
     }
   }
 
@@ -420,7 +417,7 @@ export class LitertSidebar extends LitElement {
     const activeModelFilename = activeModel.filename;
 
     return html`
-      <!-- Model Selection Group (Selector Hidden for Local Demo) -->
+      <!-- Model Selection Group (Selector Hidden for Document Workspace) -->
       <div class="control-group" style="margin-bottom: 14px;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
           <h2 class="section-title" style="margin: 0; border: none; padding: 0;">Active Model</h2>
@@ -460,21 +457,26 @@ export class LitertSidebar extends LitElement {
       <!-- Saved Conversations List -->
       <div id="conversations-list" class="conversations-list" style="border-top: 1px solid var(--border); padding-top: 10px;">
         <!-- ➕ New Chat dashed list header -->
-        <div class="conv-item new-chat-item ${this.state.chatSession.activeSavedConvId === null ?
-        'active' :
-        ''}" @click=${() => this.state.chatSession.startNewConversation()}>
+        <button class="conv-item new-chat-item ${this.state.chatSession.activeSavedConvId === null ? 'active' : ''}"
+          @click=${async () => {
+            await this.state.chatSession.startNewConversation();
+            this.dispatchEvent(new CustomEvent('new-workspace', {bubbles:true, composed:true}));
+            this.dismissSidebar();
+          }}>
           <!-- SVG large plus icon for new chat -->
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-          <span class="conv-title">New Chat</span>
-        </div>
+          <span class="conv-title">New workspace</span>
+        </button>
 
         <!-- Saved index loop -->
         ${this.state.chatSession.conversationsList.map(
           conv => html`
           <div class="conv-item ${this.state.chatSession.activeSavedConvId === conv.id ?
               'active' :
-              ''}" @click=${() => this.state.chatSession.selectConversation(conv.id)}>
-            <span class="conv-title" title="${conv.title}">${conv.title}</span>
+              ''}">
+            <button class="conv-open" @click=${async () => {await this.state.chatSession.selectConversation(conv.id); this.dismissSidebar();}}>
+              <span class="conv-title" title="${conv.title}">${conv.title}</span>
+            </button>
             <button class="btn-delete-conv" aria-label="Delete Conversation" style="background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 0.8rem; padding: 4px;" @click=${(e: Event) => {
               e.stopPropagation();
               this.state.chatSession.deleteConversation(conv.id);
@@ -546,6 +548,6 @@ export class LitertSidebar extends LitElement {
 
 declare global {
   interface HTMLElementTagNameMap {
-    'litert-sidebar': LitertSidebar;
+    'document-sidebar': DocumentSidebar;
   }
 }

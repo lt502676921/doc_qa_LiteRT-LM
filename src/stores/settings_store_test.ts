@@ -49,7 +49,7 @@ describe('SettingsStore', () => {
     store.temperature = 0.5;
     store.saveSettings();
 
-    const storedData = window.localStorage.getItem('litertlm-chat-settings');
+    const storedData = window.localStorage.getItem('document-qa-chat-settings');
     expect(storedData).toBeDefined();
 
     if (storedData) {
@@ -69,7 +69,7 @@ describe('SettingsStore', () => {
       topK: 40,
     };
     window.localStorage.setItem(
-        'litertlm-chat-settings', JSON.stringify(customPayload));
+        'document-qa-chat-settings', JSON.stringify(customPayload));
 
     const store = new SettingsStore(mockUpdateCallback);
 
@@ -90,7 +90,7 @@ describe('SettingsStore', () => {
       topK: -100  // invalid negative value
     };
     window.localStorage.setItem(
-        'litertlm-chat-settings', JSON.stringify(corruptedPayload));
+        'document-qa-chat-settings', JSON.stringify(corruptedPayload));
 
     // When the schema parsing fails, it safely falls back to defaults.
     const store = new SettingsStore(mockUpdateCallback);
@@ -126,7 +126,7 @@ describe('SettingsStore', () => {
       ]
     };
     window.localStorage.setItem(
-        'litertlm-chat-settings', JSON.stringify(customPayload));
+        'document-qa-chat-settings', JSON.stringify(customPayload));
 
     const store = new SettingsStore(mockUpdateCallback);
     expect(store.customModels.length).toBe(1);

@@ -37,7 +37,28 @@ export function registerAppServiceWorker(container: ServiceWorkerContainer): Pro
   return container.register('./sw.js', {scope: './'});
 }
 
-/** Renders HTML using standard unsafeHTML. */
-export function renderHtml(htmlText: string) {
-  return unsafeHTML(htmlText);
+/** Treat both uploaded documents and model output as untrusted HTML. */
+export function renderHtml(htmlText: string, {codeBlocks = false}: {codeBlocks?: boolean} = {}) {
+  const template = document.createElement('template');
+  template.innerHTML = htmlText;
+  const blocked = new Set(['SCRIPT', 'STYLE', 'IFRAME', 'OBJECT', 'EMBED', 'LINK', 'META',
+    'BASE', 'FORM', 'INPUT', 'BUTTON', 'TEXTAREA', 'SELECT', 'IMG', 'VIDEO', 'AUDIO',
+    'FOREIGNOBJECT', 'ANIMATE', 'ANIMATETRANSFORM', 'ANIMATEMOTION', 'SET', 'USE', 'IMAGE', 'TEMPLATE']);
+  for (const element of template.content.querySelectorAll('*')) {
+    // Only chat markdown can use this inert, known component. Documents and
+    // other custom elements stay blocked; code previews still require a click.
+    const isCodeBlock = codeBlocks && element.tagName === 'DOCUMENT-CODE-BLOCK';
+    if (blocked.has(element.tagName.toUpperCase()) || (element.tagName.includes('-') && !isCodeBlock)) {element.remove(); continue;}
+    for (const attribute of [...element.attributes]) {
+      const name = attribute.name.toLowerCase();
+      const value = attribute.value.trim();
+      if ((isCodeBlock && !['base-64-code', 'language'].includes(name)) ||
+          name.startsWith('on') || ['src', 'srcdoc', 'action', 'formaction', 'srcset'].includes(name) ||
+          (name === 'style' && /url\s*\(|expression\s*\(|@import/i.test(value)) ||
+          (['href', 'xlink:href'].includes(name) && !/^(?:#[\w-]+|https?:\/\/|mailto:)/i.test(value)))
+        element.removeAttribute(attribute.name);
+    }
+    if (element.tagName === 'A') element.setAttribute('rel', 'noopener noreferrer');
+  }
+  return unsafeHTML(template.innerHTML);
 }

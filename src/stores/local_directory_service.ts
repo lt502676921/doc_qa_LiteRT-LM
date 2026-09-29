@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+import {directoryDatabaseName} from '../services/browser_state.js';
+
 import {CustomModel, SettingsStore} from './settings_store.js';
 
 declare global {
@@ -32,9 +34,10 @@ declare global {
 }
 
 // IndexedDB helpers to store Directory Handle
-function openDB(): Promise<IDBDatabase> {
+async function openDB(): Promise<IDBDatabase> {
+  const name = await directoryDatabaseName();
   return new Promise((resolve, reject) => {
-    const request = indexedDB.open('litertlm-local-dir', 1);
+    const request = indexedDB.open(name, 1);
     request.onupgradeneeded = () => {
       const db = request.result;
       if (!db.objectStoreNames.contains('handles')) {
@@ -68,7 +71,7 @@ async function getDirectoryHandle(): Promise<FileSystemDirectoryHandle | null> {
       request.onerror = () => reject(request.error);
     });
   } catch (e) {
-    console.warn('[LiteRT-LM] IndexedDB not available or failed:', e);
+    console.warn('[Doc Q&A] IndexedDB not available or failed:', e);
     return null;
   }
 }
@@ -125,7 +128,7 @@ export class LocalDirectoryService {
         this.updateCallback();
       }
     } catch (e) {
-      console.error('[LiteRT-LM] Failed to load existing directory handle:', e);
+      console.error('[Doc Q&A] Failed to load existing directory handle:', e);
     }
   }
 
@@ -164,7 +167,7 @@ export class LocalDirectoryService {
       if ((e as Error).name === 'AbortError') {
         this.updateStatus('Directory selection cancelled.');
       } else {
-        console.error('[LiteRT-LM] Failed to mount directory:', e);
+        console.error('[Doc Q&A] Failed to mount directory:', e);
         this.updateStatus(`Failed to mount directory: ${(e as Error).message}`);
       }
     }
@@ -189,7 +192,7 @@ export class LocalDirectoryService {
       this.settings.saveSettings();
       this.updateStatus(`Scanned ${models.length} local models.`);
     } catch (e) {
-      console.error('[LiteRT-LM] Failed to scan directory:', e);
+      console.error('[Doc Q&A] Failed to scan directory:', e);
       this.updateStatus(`Failed to scan directory: ${(e as Error).message}`);
     }
   }

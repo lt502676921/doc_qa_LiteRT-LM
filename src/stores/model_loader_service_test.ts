@@ -92,7 +92,7 @@ describe('ModelLoaderService', () => {
 
     await modelLoader.updateCacheSize();
 
-    expect(window.caches.open).toHaveBeenCalledWith('litertlm-models');
+    expect(window.caches.open).toHaveBeenCalledWith('document-qa-models');
     expect(modelLoader.cachedModels.get('model1.litertlm')).toBe(1024);
     expect(modelLoader.cachedModels.get('model2.litertlm')).toBe(2048);
     expect(updateCalled).toBeTrue();
@@ -108,7 +108,7 @@ describe('ModelLoaderService', () => {
 
     expect(deleted).toBeTrue();
     expect(window.confirm).toHaveBeenCalled();
-    expect(window.caches.open).toHaveBeenCalledWith('litertlm-models');
+    expect(window.caches.open).toHaveBeenCalledWith('document-qa-models');
     expect(mockCache.delete).toHaveBeenCalledWith('model1.litertlm');
     expect(modelLoader.updateCacheSize).toHaveBeenCalled();
   });
@@ -132,7 +132,7 @@ describe('ModelLoaderService', () => {
     await modelLoader.clearAllCache(onDeleted);
 
     expect(window.confirm).toHaveBeenCalled();
-    expect(window.caches.delete).toHaveBeenCalledWith('litertlm-models');
+    expect(window.caches.delete).toHaveBeenCalledWith('document-qa-models');
     expect(onDeleted).toHaveBeenCalled();
     expect(modelLoader.updateCacheSize).toHaveBeenCalled();
   });
@@ -178,7 +178,7 @@ describe('ModelLoaderService', () => {
 
     await modelLoader.loadModelWeights(settingsStore.modelSettings, onModelLoaded);
 
-    expect(window.caches.open).toHaveBeenCalledWith('litertlm-models');
+    expect(window.caches.open).toHaveBeenCalledWith('document-qa-models');
     expect(mockCache.match)
         .toHaveBeenCalledWith('https://example.com/model.litertlm');
     expect(window.fetch).not.toHaveBeenCalled();
@@ -215,7 +215,7 @@ describe('ModelLoaderService', () => {
 
     await modelLoader.loadModelWeights(settingsStore.modelSettings, onModelLoaded);
 
-    expect(window.caches.open).toHaveBeenCalledWith('litertlm-models');
+    expect(window.caches.open).toHaveBeenCalledWith('document-qa-models');
     expect(mockCache.match)
         .toHaveBeenCalledWith('https://example.com/model.litertlm');
     expect(window.fetch).toHaveBeenCalled();
@@ -283,7 +283,7 @@ describe('ModelLoaderService', () => {
     expect(customModel.name).toBe('custom-model');
     expect(customModel.filename).toBe('custom-model.litertlm');
     expect(customModel.size).toBe('0.00 GB');
-    expect(window.caches.open).toHaveBeenCalledWith('litertlm-models');
+    expect(window.caches.open).toHaveBeenCalledWith('document-qa-models');
     expect(mockCache.put).toHaveBeenCalled();
     expect(modelLoader.updateCacheSize).toHaveBeenCalled();
   });
@@ -301,7 +301,7 @@ describe('ModelLoaderService', () => {
 
     await modelLoader.loadModelWeights(settingsStore.modelSettings, onModelLoaded);
 
-    expect(window.caches.open).toHaveBeenCalledWith('litertlm-models');
+    expect(window.caches.open).toHaveBeenCalledWith('document-qa-models');
     expect(mockCache.match).toHaveBeenCalledWith('https://local-model/missing-model.litertlm');
     expect(window.fetch).not.toHaveBeenCalled();
     expect(modelLoader.engine).toBeNull();

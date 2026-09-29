@@ -1,128 +1,75 @@
-// Copyright 2026 The ODML Authors.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-
-import fs from 'fs';
-import {createRequire} from 'module';
-import path from 'path';
-import {fileURLToPath} from 'url';
+import fs from 'node:fs';
+import {createRequire} from 'node:module';
+import path from 'node:path';
+import {fileURLToPath} from 'node:url';
 import {defineConfig} from 'vite';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const root = path.dirname(fileURLToPath(import.meta.url));
+const require = createRequire(import.meta.url);
+const coreDirectory = path.dirname(require.resolve('@litert-lm/core/package.json'));
+const pdfDirectory = path.dirname(require.resolve('pdfjs-dist/package.json'));
+const papersDirectory = path.join(root, 'test/fixtures/papers');
+const headers = {'Cross-Origin-Opener-Policy': 'same-origin', 'Cross-Origin-Embedder-Policy': 'require-corp'};
+const assets: Record<string, string> = {
+  examples: papersDirectory,
+  workers: path.join(pdfDirectory, 'build'),
+  wasm: path.join(coreDirectory, 'wasm'),
+  models: path.join(root, 'models'),
+};
 
 export default defineConfig({
   base: './',
-  build: {
-    emptyOutDir: true,
-    sourcemap: false,
-  },
-  optimizeDeps: {
-    include: ['officeparser'],
-  },
-  server: {
-    port: 5173,
-    headers: {
-      'Cross-Origin-Opener-Policy': 'same-origin',
-      'Cross-Origin-Embedder-Policy': 'require-corp',
-    },
-    fs: {
-      allow: ['.'],
-    }
-  },
-  plugins: [
-    {
-      name: 'copy-assets-on-build',
-      closeBundle() {
-        const outDir = path.resolve(__dirname, 'dist');
-        if (!fs.existsSync(outDir)) return;
-
-        // Symlink all model files from models/ to dist/models/ to save disk space during local builds
-        const modelSrcDir = path.resolve(__dirname, 'models');
-        const modelDstDir = path.resolve(outDir, 'models');
-        if (fs.existsSync(modelSrcDir)) {
-          if (!fs.existsSync(modelDstDir)) {
-            fs.mkdirSync(modelDstDir, { recursive: true });
-          }
-          const files = fs.readdirSync(modelSrcDir);
-          for (const file of files) {
-            if (file.endsWith('.litertlm')) {
-              const srcPath = path.resolve(modelSrcDir, file);
-              const dstPath = path.resolve(modelDstDir, file);
-              
-              // Remove existing file or symlink if present to avoid EEXIST conflicts
-              try {
-                fs.unlinkSync(dstPath);
-              } catch (e: unknown) {
-                if ((e as {code?: string}).code !== 'ENOENT') throw e;
-              }
-              
-              console.log(`[Vite] Creating symlink for model ${file} in dist/models/`);
-              fs.symlinkSync(srcPath, dstPath, 'file');
-            }
-          }
-          console.log('[Vite] Symlinked all .litertlm models to dist/models/');
-        }
-      }
-    },
-    {
-      name: 'serve-static-assets-in-place',
-      configureServer(server) {
-        server.middlewares.use((req, res, next) => {
-          const url = req.url ? req.url.split('?')[0] : '';
-          
-          // Serve any .litertlm model file in-place from the workspace (root or subdirs)
-          if (url.endsWith('.litertlm')) {
-            const filePath = path.resolve(__dirname, url.slice(1));
-            if (fs.existsSync(filePath)) {
-              const stat = fs.statSync(filePath);
-              res.writeHead(200, {
-                'Content-Type': 'application/octet-stream',
-                'Content-Length': stat.size,
-                'Cross-Origin-Resource-Policy': 'cross-origin',
-              });
-              fs.createReadStream(filePath).pipe(res);
-              return;
-            } else {
-              console.warn(`[Vite Middleware] Model file not found at ${filePath}`);
-            }
-          }
-
-          // Serve the WASM files from node_modules/@litert-lm/core/wasm/
-          if (url.startsWith('/wasm/')) {
-            const filename = url.substring(6); // remove '/wasm/'
-            const require = createRequire(import.meta.url);
-            const coreDir = path.dirname(require.resolve('@litert-lm/core/package.json'));
-            const filePath = path.resolve(coreDir, 'wasm', filename);
-            if (fs.existsSync(filePath)) {
-              let contentType = 'application/octet-stream';
-              if (filename.endsWith('.js')) {
-                contentType = 'application/javascript';
-              } else if (filename.endsWith('.wasm')) {
-                contentType = 'application/wasm';
-              }
-              res.writeHead(200, {
-                'Content-Type': contentType,
-                'Cross-Origin-Resource-Policy': 'cross-origin',
-              });
-              fs.createReadStream(filePath).pipe(res);
-              return;
-            }
-          }
-
-          next();
+  build: {emptyOutDir: true, sourcemap: false},
+  optimizeDeps: {include: ['officeparser']},
+  server: {port: 5173, headers, fs: {allow: ['.']}},
+  preview: {headers},
+  plugins: [{
+    name: 'local-document-and-runtime-assets',
+    configureServer(server) {
+      server.middlewares.use((request, response, next) => {
+        const match = request.url?.split('?')[0].match(/^\/(examples|workers|wasm|models)\/([a-zA-Z0-9._-]+)$/);
+        if (!match || !['GET', 'HEAD'].includes(request.method || '')) return next();
+        const [, directory, filename] = match;
+        if (directory === 'examples' && !['bitcoin.pdf', 'attention.pdf', 'gfs.pdf', 'mapreduce.pdf', 'raft.pdf'].includes(filename)) return next();
+        if (directory === 'workers' && filename !== 'pdf.worker.min.mjs') return next();
+        const file = path.join(assets[directory], filename);
+        if (!fs.existsSync(file) || !fs.statSync(file).isFile()) return next();
+        response.writeHead(200, {
+          'Content-Type': filename.endsWith('.pdf') ? 'application/pdf' : /\.(mjs|js)$/.test(filename) ? 'application/javascript' :
+            filename.endsWith('.wasm') ? 'application/wasm' : 'application/octet-stream',
+          'Content-Length': fs.statSync(file).size,
+          'Cross-Origin-Resource-Policy': 'same-origin',
         });
+        if (request.method === 'HEAD') response.end();
+        else fs.createReadStream(file).pipe(response);
+      });
+      server.middlewares.use((request, response, next) => {
+        const match = request.url?.split('?')[0].match(/^\/pdf-assets\/(cmaps|standard_fonts|wasm)\/([a-zA-Z0-9._-]+)$/);
+        if (!match || !['GET', 'HEAD'].includes(request.method || '')) return next();
+        const file = path.join(pdfDirectory, match[1], match[2]);
+        if (!fs.existsSync(file) || !fs.statSync(file).isFile()) return next();
+        response.writeHead(200, {'Content-Type': file.endsWith('.wasm') ? 'application/wasm' : 'application/octet-stream',
+          'Content-Length': fs.statSync(file).size, 'Cross-Origin-Resource-Policy': 'same-origin'});
+        if (request.method === 'HEAD') response.end(); else fs.createReadStream(file).pipe(response);
+      });
+    },
+    closeBundle() {
+      const output = path.join(root, 'dist');
+      fs.mkdirSync(path.join(output, 'examples'), {recursive: true});
+      for (const name of ['bitcoin', 'attention', 'gfs', 'mapreduce', 'raft'])
+        fs.copyFileSync(path.join(papersDirectory, `${name}.pdf`), path.join(output, 'examples', `${name}.pdf`));
+      fs.copyFileSync(path.join(papersDirectory, 'UPSTREAM-LICENSE.txt'), path.join(output, 'examples/UPSTREAM-LICENSE.txt'));
+      fs.mkdirSync(path.join(output, 'workers'), {recursive: true});
+      fs.copyFileSync(path.join(pdfDirectory, 'build/pdf.worker.min.mjs'), path.join(output, 'workers/pdf.worker.min.mjs'));
+      for (const directory of ['cmaps', 'standard_fonts', 'wasm'])
+        fs.cpSync(path.join(pdfDirectory, directory), path.join(output, 'pdf-assets', directory), {recursive: true});
+      fs.cpSync(assets.wasm, path.join(output, 'wasm'), {recursive: true});
+      // Keep local development weights out of the Git/deployment bundle.
+      if (fs.existsSync(assets.models)) {
+        fs.mkdirSync(path.join(output, 'models'), {recursive: true});
+        for (const filename of fs.readdirSync(assets.models).filter(name => name.endsWith('.litertlm')))
+          fs.symlinkSync(path.join(assets.models, filename), path.join(output, 'models', filename), 'file');
       }
-    }
-  ]
+    },
+  }],
 });

@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+import {storageKey} from '../services/browser_state.js';
 import {z} from 'zod';
 
 /** Schema for custom model stored in the file system. */
@@ -120,7 +121,7 @@ export class SettingsStore implements Settings {
     };
   }
 
-  private readonly SETTINGS_KEY = 'litertlm-chat-settings';
+  private readonly SETTINGS_KEY = storageKey('chat-settings');
 
   constructor(private readonly updateCallback: () => void) {
     this.loadSettings();
@@ -133,8 +134,8 @@ export class SettingsStore implements Settings {
         const parsed = JSON.parse(data);
         const result = PartialSettingsSchema.safeParse(parsed);
         if (result.success) {
-          // Lock to Gemma 4 E4B for the demo, avoiding stale localStorage cache
-          this.selectedModelPath = MODELS[1]!.path;
+          const validated = result.data;
+          this.selectedModelPath = validated.selectedModelPath ?? this.selectedModelPath;
           // Default to 16384 (upgrade if old 4096 was cached)
           this.contextLength = (validated.contextLength && validated.contextLength !== 4096) ? validated.contextLength : 16384;
           this.maxOutputTokens =
@@ -148,12 +149,12 @@ export class SettingsStore implements Settings {
           this.localDirModels = validated.localDirModels ?? [];
         } else {
           console.warn(
-              '[LiteRT-LM] Invalid settings in LocalStorage, using defaults:',
+              '[Doc Q&A] Invalid settings in LocalStorage, using defaults:',
               result.error);
         }
       }
     } catch (e) {
-      console.error('[LiteRT-LM] Failed to load settings:', e);
+      console.error('[Doc Q&A] Failed to load settings:', e);
     }
   }
 
@@ -174,7 +175,7 @@ export class SettingsStore implements Settings {
       window.localStorage.setItem(this.SETTINGS_KEY, JSON.stringify(payload));
       this.updateCallback();
     } catch (e) {
-      console.error('[LiteRT-LM] Failed to save settings:', e);
+      console.error('[Doc Q&A] Failed to save settings:', e);
     }
   }
 

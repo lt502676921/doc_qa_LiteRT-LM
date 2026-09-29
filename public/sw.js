@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-const CACHE_NAME = 'litertlm-chat-shell-v1';
+const CACHE_NAME = 'document-qa-shell-v1';
 
 const scope = /** @type {!ServiceWorkerGlobalScope} */ (self);
 

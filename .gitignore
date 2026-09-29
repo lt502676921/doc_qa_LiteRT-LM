@@ -3,3 +3,5 @@ node_modules
 dist
 
 models/gemma-4-E4B-it-web.litertlm
+
+.DS_Store

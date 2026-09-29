@@ -70,7 +70,7 @@ describe('ChatSessionStore', () => {
 
     expect(chatSessionStore.messages.length).toBe(0);
     expect(chatSessionStore.activeSavedConvId).toBeNull();
-    expect(window.localStorage.getItem('litertlm-active-conv-id')).toBeNull();
+    expect(window.localStorage.getItem('document-qa-active-conv-id')).toBeNull();
     expect(updateCallbackCalled).toBeTrue();
     expect(statusUpdated).toBeTrue();
   });
@@ -90,11 +90,11 @@ describe('ChatSessionStore', () => {
        expect(storedId).toBeDefined();
 
        const indexData =
-           window.localStorage.getItem('litertlm-conversations-list');
+           window.localStorage.getItem('document-qa-conversations-list');
        expect(indexData).toContain('Hello world');
 
        const historyData =
-           window.localStorage.getItem(`litertlm-chat-history-${storedId}`);
+           window.localStorage.getItem(`document-qa-chat-history-${storedId}`);
        expect(historyData).toContain('Hello world');
      });
 
@@ -112,9 +112,9 @@ describe('ChatSessionStore', () => {
        }];
 
        window.localStorage.setItem(
-           'litertlm-conversations-list', JSON.stringify(mockList));
+           'document-qa-conversations-list', JSON.stringify(mockList));
        window.localStorage.setItem(
-           `litertlm-chat-history-${mockId}`, JSON.stringify(mockHistory));
+           `document-qa-chat-history-${mockId}`, JSON.stringify(mockHistory));
 
        // Refresh to pick up the list
        chatSessionStore.loadSavedConversationsIndex();
@@ -158,7 +158,7 @@ describe('ChatSessionStore', () => {
 
     // We mock sendMessage safely to ignore trying to create the actual async
     // model logic
-    spyOn(chatSessionStore, 'sendMessage').and.returnValue(Promise.resolve());
+    spyOn(chatSessionStore, 'sendMessage').and.returnValue(Promise.resolve(true));
 
     // We redo the array
     await chatSessionStore.redoResponse(3);

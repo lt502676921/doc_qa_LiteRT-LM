@@ -18,7 +18,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Doc Q&amp;A · Gemma 4 E4B</title>
+  <title>Doc Q&amp;A</title>
   
   <!-- Fonts: Source Sans 3 (UI), Source Serif 4 (Document Reading), JetBrains Mono (Code) -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -29,47 +29,47 @@
   />
 
   <!-- PWA Assets & Mobile Headers -->
+  <link rel="icon" href="./icons/document-qa.svg" type="image/svg+xml">
   <link rel="manifest" href="./manifest.json" crossorigin="use-credentials">
 
-  <meta name="theme-color" content="#f3f0e8">
+  <meta name="theme-color" content="#f5f4f0">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <style>
     :root {
-      /* Warm Parchment / Editorial Paper Theme */
-      --bg: #f3f0e8;
-      --bg-wash: #e8e4d8;
-      --ink: #1c1b16;
-      --ink-muted: rgba(28, 27, 22, 0.65);
-      --surface: #faf8f3;
-      --page: #fffdf8;
-      --line: rgba(28, 27, 22, 0.12);
-      --accent: #1e6b66;
-      --accent-hover: #16534f;
-      --accent-soft: rgba(30, 107, 102, 0.1);
-      --user-bubble: #1e6b66;
-      --ai-bubble: #ede8dc;
-      --shadow-page: 0 1px 3px rgba(28, 27, 22, 0.06), 0 12px 28px rgba(28, 27, 22, 0.08);
+      color-scheme: light;
+      --bg: #f5f4f0;
+      --bg-wash: #f5f4f0;
+      --ink: #242724;
+      --ink-muted: #72796f;
+      --surface: #ffffff;
+      --page: #ffffff;
+      --line: #e3e6de;
+      --accent: #24685c;
+      --accent-hover: #1b5147;
+      --accent-soft: #eaf2ed;
+      --danger: #b44836;
+      --user-bubble: #eaf2ed;
+      --ai-bubble: #ffffff;
+      --shadow-page: 0 2px 10px #2427240d;
       --font-sans: 'Source Sans 3', system-ui, -apple-system, sans-serif;
       --font-serif: 'Source Serif 4', Georgia, serif;
       --font-mono: 'JetBrains Mono', ui-monospace, Menlo, Consolas, monospace;
-      --radius: 10px;
-      --topbar-h: 3.5rem;
-
-      /* LiteRT compatibility variables mapped cleanly */
-      --bg-dark: #f3f0e8;
-      --bg-card: #faf8f3;
-      --bg-chat: #f6f3ec;
-      --bg-input: #fffdf8;
-      --border: rgba(28, 27, 22, 0.12);
-      --text: #1c1b16;
-      --text-muted: rgba(28, 27, 22, 0.65);
-      --teal: #1e6b66;
-      --teal-dark: #16534f;
+      --radius: 12px;
+      --topbar-h: 64px;
+      --bg-dark: #f5f4f0;
+      --bg-card: #ffffff;
+      --bg-chat: #ffffff;
+      --bg-input: #ffffff;
+      --border: #e3e6de;
+      --text: #242724;
+      --text-muted: #72796f;
+      --teal: #24685c;
+      --teal-dark: #1b5147;
       --blue: #2563eb;
       --blue-dark: #1d4ed8;
-      --slate-bubble-user: #1e6b66;
-      --slate-bubble-bot: #ede8dc;
+      --slate-bubble-user: #eaf2ed;
+      --slate-bubble-bot: #ffffff;
     }
 
     *, *::before, *::after {
@@ -79,7 +79,7 @@
     html, body {
       margin: 0;
       padding: 0;
-      height: 100vh;
+      height: 100dvh;
       overflow: hidden;
       overscroll-behavior: none; 
     }
@@ -87,26 +87,12 @@
     body {
       font-family: var(--font-sans);
       color: var(--ink);
-      background:
-        radial-gradient(120% 80% at 10% 0%, rgba(255, 255, 255, 0.65), transparent 55%),
-        linear-gradient(180deg, var(--bg) 0%, var(--bg-wash) 100%);
-      background-attachment: fixed;
+      background: var(--bg);
       display: flex;
       flex-direction: column;
     }
 
-    body::before {
-      content: '';
-      position: fixed;
-      inset: 0;
-      pointer-events: none;
-      opacity: 0.35;
-      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.45'/%3E%3C/svg%3E");
-      mix-blend-mode: multiply;
-      z-index: 1;
-    }
-
-    litert-lm-chat-app {
+    document-qa-app {
       position: relative;
       z-index: 2;
     }
@@ -114,7 +100,7 @@
 </head>
 <body>
   <!-- Centralized Lit Component App Shell -->
-  <litert-lm-chat-app></litert-lm-chat-app>
+  <document-qa-app></document-qa-app>
 
   <!-- Mount the Lit Elements Entrypoint -->
   <script type="module" src="/src/index.ts"></script>

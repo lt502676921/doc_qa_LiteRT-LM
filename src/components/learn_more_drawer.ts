@@ -21,8 +21,8 @@ import {sharedStyles} from '../styles/shared_styles.js';
 /* tslint:disable:no-new-decorators */
 
 /** Component for the right sidebar drawer with "Learn More" information. */
-@customElement('litert-learn-more')
-export class LitertLearnMore extends LitElement {
+@customElement('document-learn-more')
+export class DocumentLearnMore extends LitElement {
   static override styles = [
     sharedStyles, css`
       :host {
@@ -63,7 +63,7 @@ export class LitertLearnMore extends LitElement {
       .btn-dismiss-right-drawer:hover {
         background-color: rgba(0, 201, 158, 0.08);
         border-color: var(--teal);
-        color: #ffffff;
+        color: var(--text);
       }
       
       a {
@@ -86,71 +86,24 @@ export class LitertLearnMore extends LitElement {
   }
 
   override render() {
-
     return html`
-      <!-- Top Header Group with Done Button -->
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; border-bottom: 1px solid var(--border); padding-bottom: 12px; flex-shrink: 0;">
-        <h2 class="section-title" style="margin: 0; border: none; padding: 0; text-transform: uppercase; letter-spacing: 0.05em;">Learn More</h2>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+        <h2 class="section-title" style="margin:0;border:none;">About Doc Q&amp;A</h2>
         <button class="btn-dismiss-right-drawer" @click=${this.dismissLearnMore}>Done</button>
       </div>
-
-      <!-- Dynamic Scrollable Documentation Body -->
-      <div style="flex: 1; overflow-y: auto; padding-right: 4px; padding-bottom: 16px; overscroll-behavior: contain;">
-        
-        <!-- What is LiteRT-LM Section -->
-        <div class="doc-section" style="margin-bottom: 20px;">
-          <h3 style="font-size: 0.85rem; color: #ffffff; font-weight: bold; margin: 0 0 8px 0; border-left: 3px solid var(--teal); padding-left: 8px;">What is LiteRT-LM?</h3>
-          <p style="font-size: 0.78rem; line-height: 1.5; color: #cbd5e1; margin: 0 0 10px 0; text-align: justify;">
-            LiteRT-LM is a production-ready, open-source inference framework designed to deliver high-performance, cross-platform LLM deployments on edge devices.
-          </p>
-          <ul style="font-size: 0.75rem; line-height: 1.45; color: #cbd5e1; padding-left: 16px; margin: 0 0 12px 0; display: flex; flex-direction: column; gap: 6px;">
-            <li><b>Cross-Platform Support:</b> Run on Android, iOS, Web, Desktop, and IoT (e.g. Raspberry Pi).</li>
-            <li><b>Multi-Language Support:</b> Build with native APIs for <a href="https://ai.google.dev/edge/litert-lm/android" target="_blank" rel="noopener" style="color: var(--teal); text-decoration: none; font-weight: 600;">Kotlin</a>, <a href="https://ai.google.dev/edge/litert-lm/swift" target="_blank" rel="noopener" style="color: var(--teal); text-decoration: none; font-weight: 600;">Swift</a>, <a href="https://ai.google.dev/edge/litert-lm/python" target="_blank" rel="noopener" style="color: var(--teal); text-decoration: none; font-weight: 600;">Python</a>, <a href="https://ai.google.dev/edge/litert-lm/flutter" target="_blank" rel="noopener" style="color: var(--teal); text-decoration: none; font-weight: 600;">Flutter</a>, and <a href="https://ai.google.dev/edge/litert-lm/js" target="_blank" rel="noopener" style="color: var(--teal); text-decoration: none; font-weight: 600;">JavaScript</a>.</li>
-            <li><b>Hardware Acceleration:</b> Get peak performance and system stability by leveraging GPU and NPU accelerators across diverse hardware.</li>
-            <li><b>Multi-Modality:</b> Build with LLMs that have vision and audio support.</li>
-            <li><b>Tool Use:</b> Function calling support for agentic workflows with constrained decoding for improved accuracy.</li>
-            <li><b>Broad Model Support:</b> Run Gemma, Llama, Phi-4, Qwen and more.</li>
-          </ul>
-          <a href="https://ai.google.dev/edge/litert-lm/overview" target="_blank" rel="noopener" style="display: block; text-align: center; font-size: 0.72rem; color: #ffffff; border: 1px solid var(--teal); padding: 8px 10px; border-radius: 4px; text-decoration: none; font-weight: bold; background-color: rgba(0, 201, 158, 0.04); transition: background-color 0.15s; margin-top: 12px;">
-            Learn more about LiteRT-LM
-          </a>
-        </div>
-
-        <!-- How to Get Started Section -->
-        <div class="doc-section" style="margin-bottom: 20px; border-top: 1px solid var(--border); padding-top: 16px;">
-          <h3 style="font-size: 0.85rem; color: #ffffff; font-weight: bold; margin: 0 0 8px 0; border-left: 3px solid var(--teal); padding-left: 8px;">How to Get Started</h3>
-          <p style="font-size: 0.78rem; line-height: 1.5; color: #cbd5e1; margin: 0 0 12px 0;">
-            Ready to integrate LiteRT-LM inside your project? You can install the core npm package and explore the official developer guides:
-          </p>
-          <div style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px;">
-            <a href="https://www.npmjs.com/package/@litert-lm/core" target="_blank" rel="noopener" style="font-size: 0.72rem; color: var(--teal); text-decoration: none; font-weight: 600; border-bottom: 1px dashed rgba(0, 201, 158, 0.4); padding-bottom: 1px; display: inline-block; width: max-content;">
-              Explore the npm package
-            </a>
-            <a href="https://ai.google.dev/edge/litert-lm/js" target="_blank" rel="noopener" style="font-size: 0.72rem; color: var(--teal); text-decoration: none; font-weight: 600; border-bottom: 1px dashed rgba(0, 201, 158, 0.4); padding-bottom: 1px; display: inline-block; width: max-content;">
-              Read the JS developer documentation
-            </a>
-          </div>
-        </div>
-
-        <!-- Source Code Section -->
-        <div class="doc-section" style="margin-bottom: 16px; border-top: 1px solid var(--border); padding-top: 16px;">
-          <h3 style="font-size: 0.85rem; color: #ffffff; font-weight: bold; margin: 0 0 8px 0; border-left: 3px solid var(--teal); padding-left: 8px;">Source Code</h3>
-          <p style="font-size: 0.78rem; line-height: 1.5; color: #cbd5e1; margin: 0 0 12px 0;">
-            LiteRT-LM is open-source. Check out the official repository, report bugs, or contribute patches:
-          </p>
-          <a href="https://github.com/google-ai-edge/LiteRT-LM" target="_blank" rel="noopener" style="display: block; text-align: center; font-size: 0.72rem; color: #ffffff; border: 1px solid var(--border); padding: 8px 10px; border-radius: 4px; text-decoration: none; font-weight: bold; background-color: rgba(255,255,255,0.03); transition: background-color 0.15s;">
-            GitHub Repository
-          </a>
-        </div>
-
-        <!-- Anchored Muted Footer Note -->
-        <div class="doc-section" style="border-top: 1px dashed var(--border); padding-top: 12px; margin-top: 24px;">
-          <p style="font-size: 0.68rem; line-height: 1.5; color: var(--text-muted); font-style: italic; margin: 0; text-align: center;">
-            Want to run standard LiteRT models instead of LLMs? Check out 
-            <a href="https://www.npmjs.com/package/@litertjs/core?activeTab=readme" target="_blank" rel="noopener" style="color: var(--teal); text-decoration: none; font-weight: bold; border-bottom: 1px dotted rgba(0, 201, 158, 0.4);">@litertjs/core</a>
-          </p>
-        </div>
-
+      <div style="flex:1;overflow-y:auto;line-height:1.6;color:var(--text);">
+        <h3>Read and ask</h3>
+        <p>Open a document or choose a built-in example, then ask questions about its readable text.</p>
+        <h3>Check the sources</h3>
+        <p>Use the answer's source references to locate the evidence in your document.
+          The reading range shows which parts were available for the answer.</p>
+        <h3>Local processing</h3>
+        <p>Document parsing and model inference run in your browser. The model must be
+          available locally or downloaded before you can generate answers.</p>
+        <h3>Reading limits</h3>
+        <p>Scanned pages and image details may be unavailable without readable text.
+          Long documents may use selected excerpts or a summary in batches.
+          Review the original sources when accuracy matters.</p>
       </div>
     `;
   }
@@ -158,6 +111,6 @@ export class LitertLearnMore extends LitElement {
 
 declare global {
   interface HTMLElementTagNameMap {
-    'litert-learn-more': LitertLearnMore;
+    'document-learn-more': DocumentLearnMore;
   }
 }

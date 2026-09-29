@@ -16,6 +16,8 @@
 
 import {Backend, Engine, getOrLoadGlobalLiteRtLm, GpuArtisanConfig} from '@litert-lm/core';
 
+import {modelCacheName} from '../services/browser_state.js';
+
 import {teeStream} from '../tee_stream.js';
 
 import {LocalDirectoryService} from './local_directory_service.js';
@@ -50,7 +52,7 @@ export class ModelLoaderService {
 
   async updateCacheSize() {
     try {
-      const cache = await window.caches.open('litertlm-models');
+      const cache = await window.caches.open(await modelCacheName());
       const keys = await cache.keys();
       const newCachedModels = new Map<string, number>();
 
@@ -71,7 +73,7 @@ export class ModelLoaderService {
       this.cachedModels = newCachedModels;
       this.updateCallback();
     } catch (e) {
-      console.error('[LiteRT-LM] Failed to calculate model cache size:', e);
+      console.error('[Doc Q&A] Failed to calculate model cache size:', e);
     }
   }
 
@@ -88,7 +90,7 @@ export class ModelLoaderService {
     if (!confirmDelete) return false;
 
     try {
-      const cache = await window.caches.open('litertlm-models');
+      const cache = await window.caches.open(await modelCacheName());
       const deleted = await cache.delete(modelPath);
       if (deleted) {
         this.updateStatus('Model cache removed successfully.');
@@ -96,7 +98,7 @@ export class ModelLoaderService {
       }
       return deleted;
     } catch (e) {
-      console.error('[LiteRT-LM] Failed to delete model from Cache:', e);
+      console.error('[Doc Q&A] Failed to delete model from Cache:', e);
       return false;
     }
   }
@@ -109,14 +111,14 @@ export class ModelLoaderService {
     try {
       this.updateStatus('Clearing all cache...');
 
-      const deleted = await window.caches.delete('litertlm-models');
+      const deleted = await window.caches.delete(await modelCacheName());
       if (deleted) {
         this.updateStatus('Model cache cleared successfully.');
         if (onDeleted) onDeleted();
         await this.updateCacheSize();
       }
     } catch (e) {
-      console.error('[LiteRT-LM] Failed to clear cache:', e);
+      console.error('[Doc Q&A] Failed to clear cache:', e);
     }
   }
 
@@ -158,8 +160,8 @@ export class ModelLoaderService {
 
     try {
       if (!this.isWasmLoaded) {
-        this.updateStatus('Loading LiteRT WASM runtime...');
-        const wasmPath = import.meta.env.DEV ? '/wasm' : undefined;
+        this.updateStatus('Preparing the local model runtime...');
+        const wasmPath = new URL(`${import.meta.env.BASE_URL}wasm/`, window.location.href).href;
         await this.loadWasm(wasmPath);
         this.isWasmLoaded = true;
       }
@@ -182,7 +184,7 @@ export class ModelLoaderService {
         const file = await this.localDirService.getFile(modelPath);
         modelInput = file.stream();
       } else {
-        const cache = await window.caches.open('litertlm-models');
+        const cache = await window.caches.open(await modelCacheName());
         const cachedResponse = await cache.match(modelPath);
 
         this.downloadProgresses.set(modelFilename, 0);
@@ -227,7 +229,7 @@ export class ModelLoaderService {
               signal: this.downloadAbortController.signal,
             });
             if (localCheck.ok) {
-              console.log(`[LiteRT-LM] Found local model at ${localCandidate}!`);
+              console.log(`[Doc Q&A] Found local model at ${localCandidate}!`);
               fetchTargetUrl = localCandidate;
               this.updateStatus(`Loading local model (${modelFilename})...`);
             } else {
@@ -276,10 +278,10 @@ export class ModelLoaderService {
               })
               .catch(err => {
                 if (this.isDownloadAborted) {
-                  console.log('[LiteRT-LM] Cache write aborted.');
+                  console.log('[Doc Q&A] Cache write aborted.');
                   return;
                 }
-                console.error('[LiteRT-LM] Cache write failed:', err);
+                console.error('[Doc Q&A] Cache write failed:', err);
                 this.updateStatus(
                     '⚠ Cache Failed: Disk quota exceeded. (Running from memory)');
               });
@@ -321,6 +323,7 @@ export class ModelLoaderService {
       this.isModelLoading = false;
       this.downloadProgresses.delete(modelFilename);
       this.downloadSpeeds.delete(modelFilename);
+      this.updateStatus('Model ready.');
       this.updateCallback();
 
     } catch (err: unknown) {
@@ -343,7 +346,7 @@ export class ModelLoaderService {
 
   async importCustomModel(file: File): Promise<CustomModel> {
     const path = `https://local-model/${file.name}`;
-    const cache = await window.caches.open('litertlm-models');
+    const cache = await window.caches.open(await modelCacheName());
     
     this.updateStatus(`Importing local model ${file.name}...`);
     this.isModelLoading = true;
@@ -370,7 +373,7 @@ export class ModelLoaderService {
       return customModel;
       
     } catch (e) {
-      console.error('[LiteRT-LM] Failed to import custom model:', e);
+      console.error('[Doc Q&A] Failed to import custom model:', e);
       this.updateStatus(`Failed to import model: ${(e as Error).message}`);
       throw e;
     } finally {
@@ -382,7 +385,7 @@ export class ModelLoaderService {
   cancelDownload() {
     if (this.downloadAbortController) {
       this.isDownloadAborted = true;
-      console.log('[LiteRT-LM] Aborting active network model download...');
+      console.log('[Doc Q&A] Aborting active network model download...');
       this.downloadAbortController.abort();
     }
   }

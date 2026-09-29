@@ -21,10 +21,10 @@ import {ChatSessionStore} from '../stores/chat_session_store.js';
 import {ModelLoaderService} from '../stores/model_loader_service.js';
 import {LocalDirectoryService} from '../stores/local_directory_service.js';
 import {MODELS, SettingsStore} from '../stores/settings_store.js';
-import {LitertSidebar} from './sidebar_drawer.js';
+import {DocumentSidebar} from './sidebar_drawer.js';
 
-describe('litert-sidebar', () => {
-  let element: LitertSidebar;
+describe('document-sidebar', () => {
+  let element: DocumentSidebar;
   let mockState: jasmine.SpyObj<LlmChatStateController>;
   let mockChatSession: jasmine.SpyObj<ChatSessionStore>;
   let mockSettings: jasmine.SpyObj<SettingsStore>;
@@ -99,7 +99,7 @@ describe('litert-sidebar', () => {
       requestUpdate: jasmine.createSpy('requestUpdate'),
     } as unknown as jasmine.SpyObj<LlmChatStateController>;
 
-    element = document.createElement('litert-sidebar');
+    element = document.createElement('document-sidebar');
     element.state = mockState;
     document.body.appendChild(element);
     await element.updateComplete;

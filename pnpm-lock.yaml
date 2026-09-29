@@ -29,6 +29,9 @@ importers:
       officeparser:
         specifier: ^8.0.0
         version: 8.0.0
+      pdfjs-dist:
+        specifier: 6.2.108
+        version: 6.2.108
       zod:
         specifier: ^3.23.8
         version: 3.25.76
@@ -36,6 +39,9 @@ importers:
       '@types/jasmine':
         specifier: ^6.0.0
         version: 6.0.0
+      '@types/node':
+        specifier: 26.6.3
+        version: 26.6.3
       '@webgpu/types':
         specifier: ^0.1.69
         version: 0.1.74

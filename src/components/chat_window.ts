@@ -18,6 +18,7 @@ import './chat_bubble';
 
 import {css, html, LitElement} from 'lit';
 import {customElement, property, query, state} from 'lit/decorators.js';
+import {live} from 'lit/directives/live.js';
 
 import {LlmChatStateController} from '../state_controller.js';
 import {sharedStyles} from '../styles/shared_styles.js';
@@ -25,13 +26,17 @@ import {sharedStyles} from '../styles/shared_styles.js';
 /* tslint:disable:no-new-decorators */
 
 /** Main chat window component managing messages and input. */
-@customElement('litert-chat-window')
-export class LitertChatWindow extends LitElement {
+@customElement('document-chat-window')
+export class DocumentChatWindow extends LitElement {
   @property({ type: Object })
   state!: LlmChatStateController;
 
+  @property({type: Boolean}) documentLoading = false;
+
   @state()
   private shouldAutoScroll = true;
+
+  @state() private draft = '';
 
   private wasGenerating = false;
   private isProgrammaticScroll = false;
@@ -55,45 +60,38 @@ export class LitertChatWindow extends LitElement {
         flex: 1;
         overflow-y: auto;
         overscroll-behavior: contain; 
-        padding: 16px 20px;
+        padding: 18px 16px;
         display: flex;
         flex-direction: column;
-        gap: 14px;
-        background-color: var(--bg-chat);
+        gap: 12px;
+        background: radial-gradient(ellipse at top right, #eaf0fc60, transparent 60%), linear-gradient(180deg, #f7faf8, #fcfdfc);
       }
 
-      .starters-container {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 8px;
-        padding: 12px 20px 6px 20px;
-        background-color: var(--bg-chat);
-        flex-shrink: 0;
+      .chat-welcome { margin:auto 0; padding:34px 2px 20px; }
+      .chat-welcome .welcome-mark { color:#94ac9b; font-size:30px; display:block; margin-bottom:15px; }
+      .chat-welcome h3 { font-family:var(--font-serif); font-size:25px; font-weight:400; line-height:1.25; letter-spacing:-.4px; margin:0 0 12px; }
+      .chat-welcome > p { font-size:14px; color:var(--ink-muted); line-height:1.65; margin:0 0 22px; }
+      .starters-container { display:flex; flex-direction:column; gap:8px; }
+      .btn-starter { display:flex; justify-content:space-between; align-items:center; gap:10px; border:1px solid var(--line); background:var(--surface); color:var(--ink); padding:12px 14px; border-radius:9px; font-size:13px; cursor:pointer; font-family:inherit; text-align:left; line-height:1.5; }
+      .btn-starter::after { content:'↗'; color:#9aa79b; font-size:15px; }
+      .btn-starter:hover:not(:disabled) { background:var(--accent-soft); border-color:#b0c7b8; }
+      .composer-help { margin:6px 0 0; color:var(--ink-muted); font-size:11px; line-height:1.4; }
+      .input-wrapper { display:flex; align-items:flex-end; gap:8px; padding:8px 10px; border:1px solid #d6ded3; border-radius:10px; background:var(--surface); }
+      .input-wrapper:focus-within { border-color:var(--accent); box-shadow:0 0 0 2px var(--accent-soft); }
+      #chat-input { flex:1; min-width:0; height:28px; min-height:28px; max-height:140px; background:transparent; border:0; border-radius:0; color:var(--ink); padding:0; box-shadow:none; font-size:14px; font-family:inherit; line-height:1.6; resize:none; }
+      .composer-actions { display:flex; flex-shrink:0; align-items:center; }
+      .composer-button { height:34px; padding:0 14px; font-size:13px; border-radius:7px; white-space:nowrap; }
+      @media (max-width:580px) {
+        .chat-messages { padding:14px 12px; gap:12px; }
+        .composer-button { max-width:128px; padding:0 10px; white-space:normal; line-height:1.2; }
       }
-
-      .btn-starter {
-        background-color: rgba(28, 27, 22, 0.05);
-        border: 1px solid var(--border);
-        color: var(--text-muted);
-        padding: 5px 11px;
-        border-radius: 16px;
-        font-size: 0.75rem;
-        cursor: pointer;
-        transition: all 0.15s;
-        font-family: inherit;
-      }
-
-      .btn-starter:hover:not(:disabled) {
-        background-color: var(--page);
-        border-color: var(--accent);
-        color: var(--ink);
-      }
+      @media (prefers-reduced-motion:reduce) { * { transition:none !important; } }
 
       .chat-input-container {
-        padding: 16px 24px 24px 24px;
+        padding: 8px 16px 10px;
         background-color: var(--bg-card);
-        border-top: 1px solid var(--border);
-        display: flex;
+        border-top: none;
+        display: block;
         gap: 12px;
         align-items: flex-end;
         flex-shrink: 0;
@@ -172,9 +170,10 @@ export class LitertChatWindow extends LitElement {
 
   private handleInputHeight(e: Event) {
     const txtarea = e.target as HTMLTextAreaElement;
-    txtarea.style.height = '48px'; // Reset to base height first
-    const newHeight = Math.max(48, txtarea.scrollHeight);
-    txtarea.style.height = Math.min(newHeight, 160) + 'px';
+    this.draft = txtarea.value;
+    txtarea.style.height = ''; // Measure content from the compact default height.
+    const newHeight = Math.max(28, txtarea.scrollHeight);
+    txtarea.style.height = Math.min(newHeight, 140) + 'px';
   }
 
   private handleEditPrompt(e: CustomEvent<{prompt: string}>) {
@@ -187,6 +186,7 @@ export class LitertChatWindow extends LitElement {
   }
 
   private handleKeyDown(e: KeyboardEvent) {
+    if (e.isComposing || e.keyCode === 229) return;
     if (e.key === 'j' && e.ctrlKey) {
       // Ctrl+J for a newline (like shift + enter) without sending the message.
       // because CLI apps use Ctrl+J to insert newlines.
@@ -202,32 +202,32 @@ export class LitertChatWindow extends LitElement {
     if (e.key === 'Enter' && !e.shiftKey) {
       // Shift+Enter for a newline, Enter to send the message.
       e.preventDefault();
-      this.triggerSendMessage();
+      if ((e.target as HTMLTextAreaElement).value.trim()) this.triggerSendMessage();
     }
   }
 
   private triggerSendMessage() {
+    if (this.documentLoading || this.state.chatSession.isBusy || this.state.modelLoader.isModelLoading || this.state.chatSession.missingDocument) return;
     const txtarea = this.chatInput;
     const hasText = Boolean(txtarea && txtarea.value.trim());
 
-    // If model is not loaded yet and no message is entered, clicking loads the local model immediately!
-    if (!this.state.modelLoader.engine && !this.state.modelLoader.isModelLoading && !hasText) {
-      void this.state.modelLoader.loadModelWeights(
-        this.state.settings.modelSettings,
-        async () => {
-          await this.state.chatSession.createConversationSession();
-        }
-      );
+    if (!hasText) {
+      if (!this.state.modelLoader.engine) {
+        void this.state.modelLoader.loadModelWeights(this.state.settings.modelSettings, async () => {});
+      }
       return;
     }
 
     if (txtarea && hasText && !this.state.chatSession.isGenerating) {
       const promptText = txtarea.value;
+      this.draft = '';
       txtarea.value = '';
-      txtarea.style.height = '44px';
+      txtarea.style.height = '';
 
       // Trigger centralized message generation
-      this.state.chatSession.sendMessage(promptText);
+      void this.state.chatSession.sendMessage(promptText).then(submitted => {
+        if (!submitted && !this.draft && !txtarea.value) {txtarea.value = promptText; this.handleInputHeight({target: txtarea} as unknown as Event);}
+      });
     }
   }
 
@@ -248,105 +248,44 @@ export class LitertChatWindow extends LitElement {
         this.state.settings.selectedModelPath.split('/').pop() || '';
     const isModelLoaded = Boolean(this.state.modelLoader.engine);
     const isLoading = this.state.modelLoader.isModelLoading;
+    const hasDraft = Boolean(this.draft.trim());
 
+    const startersDisabled = this.documentLoading || isLoading || this.state.chatSession.isBusy || this.state.chatSession.missingDocument;
     return html`
-      <!-- Scrollable Messages Box -->
-      <div id="chat-messages" class="chat-messages">
-
-        <!-- Active bubbles mapping -->
-        ${this.state.chatSession.messages.map((msg, idx) => html`
-          <litert-chat-bubble
-            .message=${msg}
-            .index=${idx}
-            .state=${this.state}
-            @edit-prompt=${this.handleEditPrompt}
-          ></litert-chat-bubble>
-        `)}
+      <div id="chat-messages" class="chat-messages" role="log" aria-label="Conversation" aria-live="polite">
+        ${isMessagesEmpty ? html`<div class="chat-welcome">
+          <span class="welcome-mark" aria-hidden="true">↳</span>
+          <h3>${this.state.chatSession.missingDocument ? 'Let’s reopen the source.' : this.state.chatSession.currentDoc ? 'What would you like to understand?' : 'Start with a question.'}</h3>
+          <p>${this.state.chatSession.missingDocument ? 'Open the original document to continue this saved conversation.' : this.state.chatSession.currentDoc ? 'Explore the ideas, ask about the details, and check the passages behind each answer.' : 'Ask a question, or open a document to explore its ideas together.'}</p>
+          <div class="starters-container">
+            ${this.state.chatSession.currentDoc ? html`
+              <button class="btn-starter" ?disabled=${startersDisabled} @click=${() => this.useStarter('What are the core findings and main points of this document?')}>What are the main ideas?</button>
+              <button class="btn-starter" ?disabled=${startersDisabled} @click=${() => this.useStarter('Can you break down the key data and methodology in this document?')}>Explain the key data and methods</button>
+              <button class="btn-starter" ?disabled=${startersDisabled} @click=${() => this.useStarter('What conclusions or recommendations does the document make?')}>What does the document conclude?</button>` : html`
+              <button class="btn-starter" ?disabled=${startersDisabled} @click=${() => this.useStarter('What types of documents can I upload and analyze?')}>Which documents can I explore?</button>
+              <button class="btn-starter" ?disabled=${startersDisabled} @click=${() => this.useStarter('How does local WebGPU document intelligence work?')}>How does local analysis work?</button>`}
+          </div>
+        </div>` : ''}
+        ${this.state.chatSession.messages.map((msg, idx) => html`<document-chat-bubble .message=${msg} .index=${idx} .state=${this.state} .busy=${this.state.chatSession.isBusy} @edit-prompt=${this.handleEditPrompt}></document-chat-bubble>`)}
       </div>
-
-      <!-- Quick Starters suggestions container (only visible if history is empty) -->
-      ${
-        isMessagesEmpty ?
-            html`
-        <div class="starters-container">
-          ${this.state.chatSession.currentDoc ? html`
-            <button class="btn-starter" @click=${
-                  () => this.useStarter(
-                      'What are the core findings and main points of this document?')}>Main Findings</button>
-            <button class="btn-starter" @click=${
-                  () => this.useStarter(
-                      'Can you break down the key data and methodology in this document?')}>Key Data &amp; Methodology</button>
-            <button class="btn-starter" @click=${
-                  () => this.useStarter(
-                      'What conclusions or recommendations does the document make?')}>Conclusions</button>
-          ` : html`
-            <button class="btn-starter" @click=${
-                  () => this.useStarter(
-                      'What types of documents can I upload and analyze?')}>Supported Documents</button>
-            <button class="btn-starter" @click=${
-                  () => this.useStarter(
-                      'How does local WebGPU document intelligence work?')}>How It Works</button>
-          `}
-        </div>
-      ` :
-            ''}
-
-      <!-- Loading Banner (if loading weights) -->
-      ${isLoading ? html`
-        <div style="padding: 8px 20px; font-size: 0.75rem; color: var(--accent); background: var(--accent-soft); border-top: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between;">
-          <span>${this.state.statusText}</span>
-          <span style="font-family: var(--font-mono); font-weight: 600;">
-            ${this.state.modelLoader.downloadProgresses.get(activeModelFilename) !== undefined
-              ? `${this.state.modelLoader.downloadProgresses.get(activeModelFilename)}%`
-              : ''}
-          </span>
-        </div>
-      ` : ''}
-
-      <!-- Input Area -->
+      ${isLoading ? html`<div role="status" style="padding:10px 20px;font-size:12px;color:var(--accent);background:var(--accent-soft);">
+        ${this.state.statusText} ${this.state.modelLoader.downloadProgresses.get(activeModelFilename) !== undefined ? `${this.state.modelLoader.downloadProgresses.get(activeModelFilename)}%` : ''}
+      </div>` : ''}
       <div class="chat-input-container">
-        <div class="input-wrapper" style="display: flex; flex: 1; width: 100%; gap: 10px; position: relative; align-items: center;">
-          <textarea
-            id="chat-input"
-            placeholder=${
-              isLoading
-                ? 'Loading model weights into WebGPU...'
-                : !isModelLoaded
-                ? (this.state.chatSession.currentDoc
-                    ? 'Ask a question or click "Load Model"...'
-                    : 'Type a question or click "Load Model"...')
-                : (this.state.chatSession.currentDoc
-                    ? 'Ask a question about this document...'
-                    : 'Ask a question...')}
-            ?disabled=${isLoading}
-            style="flex: 1; height: 44px; max-height: 140px; background-color: var(--page); border: 1px solid var(--border); border-radius: 8px; color: var(--ink); padding: 10px 14px; box-sizing: border-box; font-size: 0.88rem; font-family: inherit; line-height: 1.5; resize: none; transition: border-color 0.15s, box-shadow 0.15s;"
-            @input=${this.handleInputHeight}
-            @keydown=${this.handleKeyDown}
-          ></textarea>
-
-          <!-- Dynamic Send / Stop action button -->
-          ${
-        this.state.chatSession.isGenerating ? html`
-            <button
-              class="btn btn-stop"
-              style="height: 38px; padding: 0 16px; font-size: 0.85rem; font-weight: bold; border-radius: 8px; cursor: pointer; transition: background-color 0.15s;"
-              @click=${() => this.state.chatSession.cancelGeneration()}
-            >
-              Stop
-            </button>
-          ` :
-                                              html`
-            <button
-              id="btn-send"
-              class="btn btn-primary"
-              ?disabled=${isLoading}
-              style="height: 38px; padding: 0 16px; font-size: 0.85rem; font-weight: 600; border-radius: 8px; cursor: pointer; transition: all 0.15s; white-space: nowrap;"
-              @click=${this.triggerSendMessage}
-            >
-              ${isLoading ? 'Loading...' : (!isModelLoaded ? 'Load Model' : 'Send')}
-            </button>
-          `}
+        <div class="input-wrapper">
+          <textarea id="chat-input" aria-label="Ask a question" rows="1"
+            .value=${live(this.draft)}
+            placeholder=${isLoading ? 'Preparing…' : 'Ask a question…'}
+            ?disabled=${this.documentLoading || isLoading || this.state.chatSession.isSummarizing || this.state.chatSession.isRestoring || this.state.chatSession.missingDocument}
+            @input=${this.handleInputHeight} @keydown=${this.handleKeyDown}></textarea>
+          <div class="composer-actions">
+            ${this.state.chatSession.isGenerating ? html`<button class="btn btn-stop composer-button" @click=${() => this.state.chatSession.cancelGeneration()}>Stop</button>` : html`
+              <button id="btn-send" class="btn btn-primary composer-button"
+                ?disabled=${(isModelLoaded && !hasDraft) || this.documentLoading || isLoading || this.state.chatSession.isSummarizing || this.state.chatSession.isRestoring || this.state.chatSession.missingDocument}
+                @click=${this.triggerSendMessage}>${isLoading ? 'Loading…' : !isModelLoaded ? hasDraft ? 'Load model and send' : 'Load model' : 'Send'} <span aria-hidden="true">↑</span></button>`}
+          </div>
         </div>
+        <p class="composer-help">Check answers against the source. Shift + Enter for a new line.</p>
       </div>
     `;
   }
@@ -354,6 +293,6 @@ export class LitertChatWindow extends LitElement {
 
 declare global {
   interface HTMLElementTagNameMap {
-    'litert-chat-window': LitertChatWindow;
+    'document-chat-window': DocumentChatWindow;
   }
 }

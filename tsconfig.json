@@ -1,8 +1,8 @@
 {
   "compilerOptions": {
     "target": "ES2022",
-    "module": "NodeNext",
-    "moduleResolution": "NodeNext",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
     "lib": ["DOM", "DOM.Iterable", "ES2022"],
     "strict": true,
     "esModuleInterop": true,
@@ -10,7 +10,7 @@
     "forceConsistentCasingInFileNames": true,
     "experimentalDecorators": true,
     "useDefineForClassFields": false,
-    "types": ["@webgpu/types", "jasmine"]
+    "types": ["@webgpu/types", "jasmine", "vite/client", "node"]
   },
   "include": ["src/**/*", "test/**/*", "vite.config.ts"]
 }

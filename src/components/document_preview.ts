@@ -40,14 +40,17 @@ export class DocumentPreview extends LitElement {
     button { cursor:pointer; } button:hover:not(:disabled) { background:var(--bg); }
     button:focus-visible, select:focus-visible, input:focus-visible { outline:2px solid var(--accent); outline-offset:1px; }
     button:disabled { opacity:.4; cursor:default; }
-    button[aria-pressed="true"] { color:var(--accent); background:var(--accent-soft); }
     .view-switch { display:flex; padding:2px; background:var(--bg); border-radius:7px; }
-    .view-switch button { font-size:11px; min-height:28px; }
+    .view-switch button { font-size:11px; min-height:28px; background:transparent; color:var(--ink-muted); }
+    .view-switch button[aria-pressed="true"] { background:var(--surface); color:var(--accent); box-shadow:0 1px 3px #24272410; font-weight:600; }
     .page-controls { display:flex; align-items:center; gap:3px; }
+    .page-controls input { box-sizing:border-box; width:38px; height:28px; min-height:28px; padding:0 4px; line-height:normal; }
     .toolbar-options { margin-left:auto; position:relative; }
-    .toolbar-options summary { list-style:none; padding:7px 10px; cursor:pointer; color:var(--ink-muted); border-radius:6px; }
+    .toolbar-options summary { display:flex; align-items:center; gap:5px; box-sizing:border-box; min-height:30px; line-height:1; list-style:none; padding:7px 10px; cursor:pointer; color:var(--ink-muted); border-radius:6px; }
     .toolbar-options summary::-webkit-details-marker { display:none; }
     .toolbar-options summary:hover { background:var(--bg); }
+    .options-chevron { width:12px; height:12px; flex-shrink:0; }
+    .toolbar-options[open] .options-chevron { transform:rotate(180deg); }
     .options-popover { position:absolute; top:calc(100% + 8px); right:0; width:230px; z-index:10; background:var(--surface); border:1px solid var(--line); border-radius:10px; padding:14px; box-shadow:0 8px 24px #2427241a; display:flex; flex-direction:column; gap:12px; }
     .options-popover label { display:flex; flex-direction:column; align-items:flex-start; gap:6px; }
     .options-popover select { border-color:var(--line); width:100%; }
@@ -285,7 +288,7 @@ export class DocumentPreview extends LitElement {
             }}> / ${this.pageCount || '…'}</label>
           <button aria-label="Next page" ?disabled=${this.pageNumber >= this.pageCount} @click=${() => this.showPage(this.pageNumber + 1)}>→</button>
           </div>` : ''}
-        <details class="toolbar-options"><summary aria-label="Reading options">Options <span aria-hidden="true">⌄</span></summary>
+        <details class="toolbar-options"><summary aria-label="Reading options">Options <svg class="options-chevron" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="m3 4.5 3 3 3-3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></summary>
           <div class="options-popover">
             <label>Answer using<select aria-label="Reading range" .value=${this.scope || ''} ?disabled=${this.busy}
               @change=${(event: Event) => this.dispatchEvent(new CustomEvent('scope-changed', {detail:(event.target as HTMLSelectElement).value || null, bubbles:true, composed:true}))}>

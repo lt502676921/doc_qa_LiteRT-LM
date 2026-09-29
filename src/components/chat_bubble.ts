@@ -24,7 +24,8 @@ import {LlmChatStateController, type StoredMessage} from '../state_controller.js
 import {sharedStyles} from '../styles/shared_styles.js';
 import {replyStyles} from '../styles/reply_styles.js';
 import {icon} from './icons.js';
-import {citationMarkdown} from '../services/citation_service.js';
+import {citationMarkdown, citationPlainText} from '../services/citation_service.js';
+import {sourceLocation} from '../services/document_service.js';
 
 import {getLanguage, highlight, highlightAuto, hljsStyles} from './hljs_util.js';
 import {katexStyles, renderHtml} from './util.js';
@@ -180,7 +181,8 @@ export class DocumentChatBubble extends LitElement {
   private async handleCopyMessage() {
     clearTimeout(this.copyTimer);
     try {
-      await navigator.clipboard.writeText(this.message.text);
+      await navigator.clipboard.writeText(this.message.role === 'user' ? this.message.text
+        : citationPlainText(this.message.text, this.message.citations));
       this.copyStatus = 'copied';
     } catch (error) {
       this.copyStatus = 'failed';
@@ -283,11 +285,15 @@ export class DocumentChatBubble extends LitElement {
             <div class="evidence-heading"><span>${this.icon('file')}${msg.citations?.length ? 'Sources' : 'Reading scope'}</span>
               ${hasScope ? html`<span class="reading-scope" title=${msg.readingScope}>${msg.readingScope}</span>` : ''}</div>
             ${msg.citations?.length ? html`<div class="source-citations" role="group" aria-label="Sources">
-              ${msg.citations.map(citation => html`<button type="button" class="source-citation" title=${citation.excerpt} @click=${() => this.openSource(citation.id)}>
-                <span class="source-citation-id">${citation.id}</span><span class="source-citation-label">${citation.label}</span>${this.icon('chevron')}</button>`)}
+              ${msg.citations.map((citation, index) => html`<button type="button" class="source-citation"
+                aria-label=${`View source ${index + 1} · ${sourceLocation(citation.label)}`}
+                title=${`View source · ${sourceLocation(citation.label)}\n${citation.excerpt}`} @click=${() => this.openSource(citation.id)}>
+                <span class="source-citation-id">[${index + 1}]</span><span class="source-citation-body">
+                  <span class="source-citation-label">${sourceLocation(citation.label)}</span>
+                  <span class="source-citation-excerpt">${citation.excerpt}</span></span>${this.icon('chevron')}</button>`)}
             </div>` : ''}
           </div>` : ''}
-        ${msg.invalidCitations?.length ? html`<p class="response-notice error">Unrecognized references: ${msg.invalidCitations.join(', ')}</p>` : ''}
+        ${msg.invalidCitations?.length ? html`<p class="response-notice error">Some source references could not be verified. Check this answer against the document.</p>` : ''}
         ${!isUser && msg.state === 'complete' && hasScope && chat.currentDoc && !msg.citations?.length
           ? html`<p class="response-notice">No source references were provided. Check this answer against the document.</p>` : ''}
         <footer class="message-actions ${isUser ? 'user-actions' : ''}" aria-label="Message actions">

@@ -124,7 +124,7 @@ test('both citation grammars reject absent and excluded sources', () => {
   const result = validateCitations('Valid [[S1]] [S1], excluded [[S2]] [S2], invented [[fake#p99]].', doc, [doc.blocks[0]]);
   assert.deepEqual(result.citations.map(item => item.id), ['S1']);
   assert.deepEqual(result.invalid, ['S2', 'fake#p99']);
-  assert.ok(citationMarkdown('[[S1]] [[S2]]', result.citations).includes('[S1](#source-S1) [[S2]]'));
+  assert.equal(citationMarkdown('[[S1]] [[S2]]', result.citations), '[\\[1\\]](#source-S1 "View source · Page 1") \\[Source unavailable\\]');
   assert.deepEqual(validateCitations('[[S', doc, doc.blocks).citations, []);
 });
 test('short documents use full text while reserves remain inside the configured limit', () => {
@@ -141,7 +141,7 @@ test('long documents retrieve a late fact rather than silently cutting off the e
 });
 test('unmatched retrieval and oversized questions stop before inference', () => {
   assert.ok(planContext(document(100), 'zqxv unobtainium', [], budget).error);
-  assert.ok(planContext(document(), '文'.repeat(15000), [], budget).error);
+  assert.ok(planContext(document(), 'Long question. '.repeat(4000), [], budget).error);
 });
 test('selected range never includes an excluded source', () => {
   const plan = planContext(document(), 'Evidence', [], budget, 'page-2');
@@ -156,8 +156,9 @@ test('summary batching covers every source exactly once within capacity', () => 
     assert.equal(planContext(subset, 'Summarize these source blocks', [], budget).error, undefined);
   }
 });
-test('Chinese estimates are conservative and orphan messages are not replayed', () => {
-  assert.ok(estimateTokens('文'.repeat(100)) > estimateTokens('a'.repeat(100)));
+test('dense Unicode script estimates are conservative and orphan messages are not replayed', () => {
+  const denseScriptSample = String.fromCodePoint(0x4e00, 0x3042, 0x30a2, 0xac00).repeat(25);
+  assert.ok(estimateTokens(denseScriptSample) > estimateTokens('a'.repeat(100)));
   const plan = planContext(document(), 'Evidence', [{role: 'assistant', text: 'orphan'},
     {role: 'user', text: 'Question'}, {role: 'assistant', text: 'Answer'}], budget);
   assert.deepEqual(plan.history.map(item => item.text), ['Question', 'Answer']);
@@ -218,7 +219,7 @@ test('document chat validates sources, measures actual tokens and reuses a safe 
 test('question estimates persist when optional benchmark or context metrics fail independently', async () => {
   for (const options of [{failTokenCount: true}, {failBenchmark: true}]) {
     const context = setup(options); await context.store.setDocument(document());
-    assert.equal(await context.store.sendMessage('请解释 Evidence 1'), true);
+    assert.equal(await context.store.sendMessage('Please explain Evidence 1'), true);
     const [question, answer] = context.store.messages;
     assert.equal(question.inputTokensEstimate, estimateTokens(question.text));
     assert.equal(question.tokensCount, undefined);

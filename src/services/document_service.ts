@@ -16,6 +16,11 @@ export interface ParsedDocument {
 export const SUPPORTED_EXTENSIONS = ['pdf', 'docx', 'xlsx', 'pptx', 'txt', 'md', 'markdown', 'json', 'csv'];
 export const ACCEPTED_FILE_TYPES = '.pdf,.xlsx,.docx,.pptx,.txt,.md,.markdown,.json,.csv';
 
+/** Keep extraction counters out of locations shown to readers. */
+export function sourceLocation(label: string): string {
+  return label.replace(/ · (?:paragraph|table block|text) \d+$/, '');
+}
+
 export function escapeHtml(text: string): string {
   return text.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;')
       .replaceAll('"', '&quot;').replaceAll("'", '&#39;');
@@ -129,7 +134,7 @@ export async function parseDocumentFile(file: File): Promise<ParsedDocument> {
     const body = ['md', 'markdown'].includes(extension)
       ? marked.parse(block.markdown, {async: false}) as string
       : `<p style="white-space:pre-wrap">${escapeHtml(block.text)}</p>`;
-    return `<section id="source-${block.id}" class="source-block"><small>${escapeHtml(block.label)}</small>${body}</section>`;
+    return `<section id="source-${block.id}" class="source-block"><small>${escapeHtml(sourceLocation(block.label))}</small>${body}</section>`;
   }).join('');
   const words = markdown.match(/[\p{Script=Han}]|[\p{L}\p{N}]+/gu) || [];
   return {id, name: file.name, size: file.size, extension, html, markdown,

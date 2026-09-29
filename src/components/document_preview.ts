@@ -2,7 +2,7 @@ import {css, html, LitElement, unsafeCSS, type PropertyValues} from 'lit';
 import {customElement, property, state} from 'lit/decorators.js';
 import type {PDFDocumentLoadingTask, PDFDocumentProxy, RenderTask, TextLayer} from 'pdfjs-dist';
 import pdfViewerStyles from 'pdfjs-dist/web/pdf_viewer.css?inline';
-import type {DocumentBlock, ParsedDocument} from '../services/document_service.js';
+import {sourceLocation, type DocumentBlock, type ParsedDocument} from '../services/document_service.js';
 import {renderHtml} from './util.js';
 import {icon} from './icons.js';
 
@@ -299,8 +299,8 @@ export class DocumentPreview extends LitElement {
       highlight.style.width = `${region.width * 100}%`; highlight.style.height = `${region.height * 100}%`;
       layer.appendChild(highlight);
     }
-    this.locationMessage = layer.children.length ? `${block.id} · ${block.label} · highlighted in the original document`
-      : `${block.id} · ${block.label} · page located; exact highlight coordinates are unavailable`;
+    this.locationMessage = layer.children.length ? `${sourceLocation(block.label)} · source passage highlighted`
+      : `${sourceLocation(block.label)} · source page opened; this passage could not be highlighted`;
     if (scrollToSource) {
       layer.firstElementChild?.scrollIntoView({behavior: 'smooth', block: 'center', inline: 'nearest'});
       this.scrollIntoView({behavior: 'smooth', block: 'nearest'});
@@ -328,7 +328,7 @@ export class DocumentPreview extends LitElement {
     this.renderRoot.querySelectorAll('.source-block.highlighted').forEach(element => element.classList.remove('highlighted'));
     const target = this.renderRoot.querySelector(`#source-${block.id}`);
     target?.classList.add('highlighted'); target?.scrollIntoView({behavior: 'smooth', block: 'center'});
-    this.locationMessage = `${block.id} · ${block.label} · located in extracted text`;
+    this.locationMessage = `${sourceLocation(block.label)} · source passage highlighted in text`;
   }
 
   private async showPage(value: number) {

@@ -68,11 +68,13 @@ export const replyStyles = css`
   .evidence-heading svg { width:12px; height:12px; }
   .reading-scope { min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:68%; font-size:10px; }
   .source-citations { display:flex; flex-wrap:wrap; gap:7px; margin-top:9px; }
-  .source-citation { display:inline-flex; align-items:center; gap:7px; min-width:0; max-width:100%; border:1px solid #dbe8df; background:#f6faf7; border-radius:7px; padding:6px 9px; font-family:inherit; color:#536c5e; font-size:11px; line-height:1.6; text-align:left; cursor:pointer; transition:background .15s, border-color .15s; }
+  .source-citation { display:inline-flex; align-items:center; gap:9px; min-width:0; width:100%; max-width:100%; box-sizing:border-box; border:1px solid #dbe8df; background:#f6faf7; border-radius:7px; padding:9px 11px; font-family:inherit; color:#536c5e; font-size:11px; line-height:1.6; text-align:left; cursor:pointer; transition:background .15s, border-color .15s; }
   .source-citation:hover { background:#e8f4ed; border-color:#a4cdb5; }
-  .source-citation svg { width:11px; height:11px; color:#7da78e; }
+  .source-citation svg { width:11px; height:11px; color:#7da78e; flex-shrink:0; }
   .source-citation-id { color:#2e6d4f; font:500 10px var(--font-mono); border-right:1px solid #d4e4d9; padding-right:7px; flex-shrink:0; }
-  .source-citation-label { min-width:0; overflow-wrap:anywhere; }
+  .source-citation-body { flex:1; min-width:0; }
+  .source-citation-label { display:block; font-weight:600; overflow-wrap:anywhere; }
+  .source-citation-excerpt { display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; overflow:hidden; color:var(--reply-muted); font-size:10px; line-height:1.5; margin-top:3px; overflow-wrap:anywhere; }
   .response-notice { font-size:11px; color:var(--reply-muted); line-height:1.6; margin:10px 0 0; }
   .response-notice.error { color:#a14d3c; }
   .message-actions { display:flex; align-items:center; justify-content:flex-start; gap:4px; margin-top:10px; padding-top:6px; border-top:1px solid var(--reply-line); }

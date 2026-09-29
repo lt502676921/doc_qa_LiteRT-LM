@@ -1,0 +1,231 @@
+{
+  "schemaVersion": 1,
+  "language": "en",
+  "pageConvention": "PDF physical page index, starting at 1",
+  "evaluation": "Manual model QA. Compare meaning rather than exact wording. Evidence excerpts are verified reference text, not predictions of the model's output. Source IDs depend on the document blocks supplied in the actual run. Reference pages are starting points, not an exhaustive whitelist. Cross-section cases require supporting citations from at least two distinct pages. For partial input, absence claims must be limited to the supplied excerpts. Visual-only cases assume the application's current text-only document input.",
+  "cases": [
+    {
+      "id": "bitcoin-privacy",
+      "paperId": "bitcoin",
+      "category": "fact",
+      "question": "According to the paper, why should a new key pair be used for each transaction? Does this prevent all transaction linking? Cite the original text.",
+      "expectedAnswer": "A new key pair helps prevent different transactions from being linked to a common owner. It does not eliminate all linking: multi-input transactions reveal that their inputs were owned by the same owner.",
+      "referencePages": [6],
+      "citationEvidence": [
+        {"page": 6, "section": "10. Privacy", "quote": "a new key pair should be used for each transaction to keep them from being linked to a common owner."},
+        {"page": 6, "section": "10. Privacy", "quote": "Some linking is still unavoidable with multi-input transactions, which necessarily reveal that their inputs were owned by the same owner."}
+      ],
+      "failureChecks": ["Claims that new keys guarantee complete anonymity or prevent all linking."]
+    },
+    {
+      "id": "bitcoin-proof-of-work",
+      "paperId": "bitcoin",
+      "category": "cross_section",
+      "question": "Using the Introduction, Proof-of-Work, and Conclusion sections, explain how proof-of-work helps prevent double-spending and what security assumption it relies on. Cite at least two of these sections.",
+      "expectedAnswer": "The network records a public, chronologically ordered transaction history using proof-of-work. Changing a past block requires redoing its work and the work of all subsequent blocks, then catching up with the honest chain. Security relies on honest nodes collectively controlling more CPU power than any cooperating attacker group; it is not a majority-of-node-count assumption.",
+      "referencePages": [1, 3, 8],
+      "minimumDistinctEvidencePages": 2,
+      "citationEvidence": [
+        {"page": 1, "section": "1. Introduction", "quote": "generate computational proof of the chronological order of transactions."},
+        {"page": 1, "section": "1. Introduction", "quote": "The system is secure as long as honest nodes collectively control more CPU power than any cooperating group of attacker nodes."},
+        {"page": 3, "section": "4. Proof-of-Work", "quote": "To modify a past block, an attacker would have to redo the proof-of-work of the block and all blocks after it and then catch up with and surpass the work of the honest nodes."},
+        {"page": 8, "section": "12. Conclusion", "quote": "using proof-of-work to record a public history of transactions"}
+      ],
+      "failureChecks": ["Substitutes a majority of nodes for a majority of CPU power.", "Cites only one page for the cross-section explanation."]
+    },
+    {
+      "id": "bitcoin-unsupported",
+      "paperId": "bitcoin",
+      "category": "unsupported",
+      "question": "Does this paper provide Satoshi Nakamoto's real name and home address? Answer using only the document.",
+      "expectedAnswer": "The paper does not provide a verified real name or home address for Satoshi Nakamoto.",
+      "partialInputAnswer": "The provided excerpts do not give a verified real name or home address for Satoshi Nakamoto.",
+      "referencePages": [],
+      "citationEvidence": [],
+      "failureChecks": ["Guesses an identity or an address.", "Treats the author byline, email, or website as proof of a real identity or home address.", "Invents a supporting citation."]
+    },
+    {
+      "id": "attention-dimensions",
+      "paperId": "attention",
+      "category": "cross_section",
+      "question": "How many layers do the encoder and decoder each have? What are the model dimension and the inner dimension of the feed-forward network? Cite both the architecture and feed-forward network descriptions.",
+      "expectedAnswer": "The encoder and decoder each have 6 layers. The model dimension is d_model = 512, and the feed-forward network's inner dimension is d_ff = 2048.",
+      "referencePages": [3, 5],
+      "minimumDistinctEvidencePages": 2,
+      "citationEvidence": [
+        {"page": 3, "section": "3.1 Encoder and Decoder Stacks", "quote": "The encoder is composed of a stack of N = 6 identical layers."},
+        {"page": 3, "section": "3.1 Encoder and Decoder Stacks", "quote": "The decoder is also composed of a stack of N = 6 identical layers."},
+        {"page": 5, "section": "3.3 Position-wise Feed-Forward Networks", "quote": "The dimensionality of input and output is dmodel = 512, and the inner-layer has dimensionality dff = 2048."}
+      ],
+      "failureChecks": ["Confuses the 8 attention heads with the 6 encoder or decoder layers.", "Swaps 512 and 2048.", "Does not cite both pages 3 and 5 or equivalent supporting evidence on distinct pages."]
+    },
+    {
+      "id": "attention-bleu",
+      "paperId": "attention",
+      "category": "fact",
+      "question": "What BLEU scores does the abstract report for WMT 2014 English-to-German and English-to-French translation? Keep each score paired with the correct task and cite the text.",
+      "expectedAnswer": "The abstract reports 28.4 BLEU for WMT 2014 English-to-German and 41.8 BLEU for WMT 2014 English-to-French.",
+      "referencePages": [1, 8],
+      "citationEvidence": [
+        {"page": 1, "section": "Abstract", "quote": "Our model achieves 28.4 BLEU on the WMT 2014 English-to-German translation task"},
+        {"page": 1, "section": "Abstract", "quote": "On the WMT 2014 English-to-French translation task, our model establishes a new single-model state-of-the-art BLEU score of 41.8"}
+      ],
+      "failureChecks": ["Swaps the language pairs.", "Reports a different model's score from a results table."]
+    },
+    {
+      "id": "attention-unsupported",
+      "paperId": "attention",
+      "category": "unsupported",
+      "question": "Does this paper report the time to first token for Gemma 4 E4B in the current browser application? Answer using only the document.",
+      "expectedAnswer": "The paper does not report a time-to-first-token measurement for Gemma 4 E4B in this browser application.",
+      "partialInputAnswer": "The provided excerpts do not report a time-to-first-token measurement for Gemma 4 E4B in this browser application.",
+      "referencePages": [],
+      "citationEvidence": [],
+      "failureChecks": ["Invents a latency value.", "Uses training time, GPU count, or translation benchmark results as browser inference latency."]
+    },
+    {
+      "id": "attention-visual-only",
+      "paperId": "attention",
+      "category": "visual_only",
+      "question": "Directly inspect Figure 1 and list the start point, end point, and color of every arrow. Do not infer them from the body text.",
+      "expectedAnswer": "I only have extracted text, so I cannot directly inspect the arrows or their colors in Figure 1. The figure is on PDF page 3, but a complete list of its graphical connections requires visual input.",
+      "referencePages": [3],
+      "citationEvidence": [],
+      "locationOnlyEvidence": [{"page": 3, "section": "Figure 1", "quote": "Figure 1: The Transformer - model architecture."}],
+      "failureChecks": ["Claims to have inspected the figure.", "Invents arrow colors or a complete list of graphical connections.", "Uses a figure caption citation as evidence of visual inspection."]
+    },
+    {
+      "id": "mapreduce-failure",
+      "paperId": "mapreduce",
+      "category": "fact",
+      "question": "Why must completed map tasks be re-executed after a worker failure, while completed reduce tasks do not need to be re-executed? Explain the difference in output storage and cite the paper.",
+      "expectedAnswer": "Completed map tasks must be re-executed because their output is stored on the failed worker's local disks and becomes inaccessible. Completed reduce tasks do not need to be re-executed because their output is stored in a global file system. In-progress map and reduce tasks on the failed worker are rescheduled.",
+      "referencePages": [4, 5],
+      "citationEvidence": [
+        {"page": 4, "section": "3.3 Fault Tolerance / Worker Failure", "quote": "Completed map tasks are re-executed on a failure because their output is stored on the local disk(s) of the failed machine and is therefore inaccessible."},
+        {"page": 4, "section": "3.3 Fault Tolerance / Worker Failure", "quote": "Completed reduce tasks do not need to be re-executed since their output is stored in a global file system."},
+        {"page": 4, "section": "3.3 Fault Tolerance / Worker Failure", "quote": "any map task or reduce task in progress on a failed worker is also reset to idle and becomes eligible for rescheduling."}
+      ],
+      "failureChecks": ["Says all completed tasks must be rerun.", "Swaps the output storage locations.", "Says in-progress reduce tasks never need rescheduling."]
+    },
+    {
+      "id": "mapreduce-reexecution",
+      "paperId": "mapreduce",
+      "category": "cross_section",
+      "question": "Compare task re-execution after worker failures with backup tasks near the end of a MapReduce job. What problem does each mechanism solve? Cite evidence from both sections.",
+      "expectedAnswer": "Failure recovery reschedules work that was in progress or whose map output became inaccessible after a worker failed. Backup tasks address stragglers that delay job completion: near the end of a job, the master runs backup executions of remaining in-progress tasks and accepts whichever execution finishes first. Both use another execution, but their triggers are different.",
+      "referencePages": [4, 5, 6],
+      "minimumDistinctEvidencePages": 2,
+      "citationEvidence": [
+        {"page": 4, "section": "3.3 Fault Tolerance / Worker Failure", "quote": "Any map tasks completed by the worker are reset back to their initial idle state, and therefore become eligible for scheduling on other workers."},
+        {"page": 6, "section": "3.6 Backup Tasks", "quote": "When a MapReduce operation is close to completion, the master schedules backup executions of the remaining in-progress tasks."},
+        {"page": 6, "section": "3.6 Backup Tasks", "quote": "The task is marked as completed whenever either the primary or the backup execution completes."}
+      ],
+      "failureChecks": ["Claims backup tasks are triggered only by worker crashes.", "Confuses a slow worker with a confirmed failed worker.", "Supports the comparison using only one page."]
+    },
+    {
+      "id": "mapreduce-unsupported",
+      "paperId": "mapreduce",
+      "category": "unsupported",
+      "question": "Does this paper report the system's memory usage and inference speed in Chrome WebGPU? Answer using only the document.",
+      "expectedAnswer": "The paper does not report memory usage or inference speed in Chrome WebGPU. Its cluster performance results are not browser WebGPU inference measurements.",
+      "partialInputAnswer": "The provided excerpts do not report memory usage or inference speed in Chrome WebGPU.",
+      "referencePages": [],
+      "citationEvidence": [],
+      "failureChecks": ["Invents browser memory or inference measurements.", "Reuses cluster throughput or job duration as WebGPU inference performance."]
+    },
+    {
+      "id": "gfs-parameters",
+      "paperId": "gfs",
+      "category": "cross_section",
+      "question": "What are the GFS chunk size and the initial lease timeout? How can a lease be extended? Cite the original evidence for each.",
+      "expectedAnswer": "The chunk size is 64 MB, and a lease has an initial timeout of 60 seconds. As long as the chunk is being mutated, the primary can request and typically receive extensions from the master indefinitely. Extension requests and grants are piggybacked on HeartBeat messages.",
+      "referencePages": [3, 5],
+      "minimumDistinctEvidencePages": 2,
+      "citationEvidence": [
+        {"page": 3, "section": "2.5 Chunk Size", "quote": "We have chosen 64 MB, which is much larger than typical file system block sizes."},
+        {"page": 5, "section": "3.1 Leases and Mutation Order", "quote": "A lease has an initial timeout of 60 seconds."},
+        {"page": 5, "section": "3.1 Leases and Mutation Order", "quote": "as long as the chunk is being mutated, the primary can request and typically receive extensions from the master indefinitely."},
+        {"page": 5, "section": "3.1 Leases and Mutation Order", "quote": "These extension requests and grants are piggybacked on the HeartBeat messages regularly exchanged between the master and all chunkservers."}
+      ],
+      "failureChecks": ["Reports 64 KB instead of 64 MB.", "Reports 60 minutes instead of 60 seconds.", "Claims a lease is always extended unconditionally.", "Cites only one page."]
+    },
+    {
+      "id": "gfs-data-path",
+      "paperId": "gfs",
+      "category": "fact",
+      "question": "Must file data pass through the master when a client reads a file? What are the roles of the master and the chunkservers? Cite the paper.",
+      "expectedAnswer": "No. The master manages metadata and supplies the chunk handle and replica locations. The client then reads file data directly from a chunkserver. Having a single master does not mean that all file data passes through it.",
+      "referencePages": [2, 3],
+      "citationEvidence": [
+        {"page": 3, "section": "2.4 Single Master", "quote": "Clients never read and write file data through the master."},
+        {"page": 3, "section": "2.4 Single Master", "quote": "The master replies with the corresponding chunk handle and locations of the replicas."},
+        {"page": 3, "section": "2.4 Single Master", "quote": "The client then sends a request to one of the replicas, most likely the closest one."},
+        {"page": 3, "section": "2.6 Metadata", "quote": "The master stores three major types of metadata: the file and chunk namespaces, the mapping from files to chunks, and the locations of each chunk's replicas."}
+      ],
+      "failureChecks": ["Says file contents are routed through the master.", "Confuses metadata requests with the data transfer path."]
+    },
+    {
+      "id": "gfs-unsupported",
+      "paperId": "gfs",
+      "category": "unsupported",
+      "question": "Does this paper provide a complete open-source repository URL and software installation commands for GFS? Use only the document.",
+      "expectedAnswer": "The paper does not provide a complete open-source repository URL or installation commands for GFS.",
+      "partialInputAnswer": "The provided excerpts do not give a complete open-source repository URL or installation commands for GFS.",
+      "referencePages": [],
+      "citationEvidence": [],
+      "failureChecks": ["Invents a repository URL or installation commands.", "Substitutes HDFS or another system's installation instructions."]
+    },
+    {
+      "id": "raft-election",
+      "paperId": "raft",
+      "category": "fact",
+      "question": "How do randomized election timeouts reduce split votes in Raft? What example interval does the paper give, and is that interval mandatory for every deployment? Cite the text.",
+      "expectedAnswer": "Randomized election timeouts spread out election starts, making it likely that one server times out, wins, and sends heartbeats before the others time out. Candidates also restart a randomized timeout for each election to reduce repeated split votes. The paper gives 150-300 ms as an example interval, not a mandatory interval for every deployment.",
+      "referencePages": [6],
+      "citationEvidence": [
+        {"page": 6, "section": "5.2 Leader election", "quote": "election timeouts are chosen randomly from a fixed interval (e.g., 150-300ms)."},
+        {"page": 6, "section": "5.2 Leader election", "quote": "This spreads out the servers so that in most cases only a single server will time out; it wins the election and sends heartbeats before any other servers time out."},
+        {"page": 6, "section": "5.2 Leader election", "quote": "Each candidate restarts its randomized election timeout at the start of an election"}
+      ],
+      "failureChecks": ["Claims 150-300 ms is required in all deployments.", "Claims randomized timeouts completely eliminate split votes."]
+    },
+    {
+      "id": "raft-majorities",
+      "paperId": "raft",
+      "category": "cross_section",
+      "question": "How does the majority requirement for a normal leader election differ from the requirement during joint consensus? Why is the joint-consensus requirement needed during a configuration change? Cite both parts of the paper.",
+      "expectedAnswer": "Under a normal configuration, a candidate needs votes from a majority of the servers in the current cluster. During joint consensus, agreement for elections and entry commitment requires separate majorities of both the old and new configurations. This prevents the two configurations from making independent decisions and avoids two leaders being elected for the same term during a transition.",
+      "referencePages": [5, 6, 10, 11],
+      "minimumDistinctEvidencePages": 2,
+      "citationEvidence": [
+        {"page": 6, "section": "5.2 Leader election", "quote": "A candidate wins an election if it receives votes from a majority of the servers in the full cluster for the same term."},
+        {"page": 10, "section": "6 Cluster membership changes", "quote": "the cluster can potentially split into two independent majorities during the transition"},
+        {"page": 11, "section": "6 Cluster membership changes", "quote": "Agreement (for elections and entry commitment) requires separate majorities from both the old and new configurations."}
+      ],
+      "failureChecks": ["Requires only a majority of the union of old and new servers.", "Says a majority of either configuration alone is sufficient during joint consensus.", "Cites only one page."]
+    },
+    {
+      "id": "raft-unsupported",
+      "paperId": "raft",
+      "category": "unsupported",
+      "question": "Does this paper give a formal ISO standard number for the Raft algorithm? Use only the document.",
+      "expectedAnswer": "The paper does not provide a formal ISO standard number for the Raft algorithm.",
+      "partialInputAnswer": "The provided excerpts do not give a formal ISO standard number for the Raft algorithm.",
+      "referencePages": [],
+      "citationEvidence": [],
+      "failureChecks": ["Invents a standard number.", "Confuses a bibliography number or section number with an ISO standard."]
+    },
+    {
+      "id": "raft-visual-only",
+      "paperId": "raft",
+      "category": "visual_only",
+      "question": "Inspect Figure 6 and describe the exact color and two-dimensional position of every box. Do not supplement the answer with body text.",
+      "expectedAnswer": "I only have extracted text, so I cannot directly inspect the colors or exact two-dimensional positions of the boxes in Figure 6. The figure is on PDF page 6, but answering this requires visual input.",
+      "referencePages": [6],
+      "citationEvidence": [],
+      "locationOnlyEvidence": [{"page": 6, "section": "Figure 6", "quote": "Figure 6: Logs are composed of entries, which are numbered sequentially."}],
+      "failureChecks": ["Claims to have inspected the colors or box positions.", "Presents information from the body text as direct visual observation.", "Treats the figure caption as evidence of graphical details."]
+    }
+  ]
+}

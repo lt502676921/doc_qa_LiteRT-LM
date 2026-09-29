@@ -270,12 +270,12 @@ describe('document-chat-window', () => {
 
   it('keeps Enter from submitting text during input method composition', async () => {
     const textarea = element.shadowRoot!.querySelector<HTMLTextAreaElement>('#chat-input')!;
-    textarea.value = '正在输入';
+    textarea.value = 'Draft input';
     textarea.dispatchEvent(new Event('input'));
     textarea.dispatchEvent(new KeyboardEvent('keydown', {key: 'Enter', isComposing: true}));
     await element.updateComplete;
     expect(mockChatSession.sendMessage).not.toHaveBeenCalled();
-    expect(textarea.value).toBe('正在输入');
+    expect(textarea.value).toBe('Draft input');
   });
 
   it('disables Send for empty or whitespace drafts and enables it for a question', async () => {

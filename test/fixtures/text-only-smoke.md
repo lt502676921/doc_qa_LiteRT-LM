@@ -1,11 +1,11 @@
-# 浏览器上传测试
+# Browser upload smoke test
 
-这是一份人工编写的测试文档，不代表真实业务信息。
+This is a synthetic test document. It does not describe real business information.
 
-## 项目记录
+## Project record
 
-测试项目的代号是 ORCHID-482。验收清单共 37 项，其中 35 项已通过，2 项等待复核。
+The test project's code name is ORCHID-482. Its acceptance checklist contains 37 items: 35 have passed, and 2 are awaiting review.
 
-## 能力边界
+## Evidence limits
 
-文档没有提供上线日期，也没有提供负责人姓名。请用这些缺失信息测试文档问答的证据边界。
+This document provides neither a launch date nor the name of the project owner. Use these missing details to check that document answers stay within the available evidence.

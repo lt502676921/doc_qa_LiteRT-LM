@@ -25,6 +25,7 @@ import { marked } from 'marked';
 import {
   ACCEPTED_FILE_TYPES,
   parseDocumentFile,
+  sourceLocation,
 } from '../services/document_service.js';
 import { LlmChatStateController } from '../state_controller.js';
 import {EXAMPLE_PAPERS, loadExamplePaper} from '../services/example_papers.js';
@@ -426,8 +427,11 @@ export class DocumentQaApp extends LitElement {
                   ${isSummarizing ? 'Generating…' : summaryText ? 'Regenerate' : 'Generate summary'}</button>` : ''}</div>
               <div class="summary-scroll">
                 ${summaryText ? html`<div class="summary-body"><div @click=${this.handleSummaryCitation}>${renderHtml(marked.parse(chat.summaryMarkdown, {async: false}) as string)}</div>
-                  <div class="source-links">${chat.summaryCitations.map(citation => html`<button title=${citation.excerpt} @click=${() => this.selectSource(new CustomEvent('source-selected', {detail: citation}))}>${citation.id} · ${citation.label}</button>`)}</div>
-                  ${chat.summaryInvalidCitations.length ? html`<small class="error-note">Unrecognized references: ${chat.summaryInvalidCitations.join(', ')}</small>` : ''}
+                  <div class="source-links">${chat.summaryCitations.map((citation, index) => html`<button
+                    aria-label=${`View source ${index + 1} · ${sourceLocation(citation.label)}`}
+                    title=${`View source · ${sourceLocation(citation.label)}\n${citation.excerpt}`}
+                    @click=${() => this.selectSource(new CustomEvent('source-selected', {detail: citation}))}>[${index + 1}] · ${sourceLocation(citation.label)}</button>`)}</div>
+                  ${chat.summaryInvalidCitations.length ? html`<small class="error-note">Some source references could not be verified. Check the summary against the document.</small>` : ''}
                   ${!isSummarizing && !chat.summaryCitations.length ? html`<small>No source references were provided. Check the summary against the document.</small>` : ''}
                   ${isSummarizing ? html`<span class="summary-streaming-indicator"></span>` : ''}</div>` : html`
                     <div class="summary-empty"><span class="summary-illustration" aria-hidden="true">${icon('summary', 32)}</span><h3>${isSummarizing ? 'Connecting the main ideas…' : 'The bigger picture, in a few words.'}</h3>

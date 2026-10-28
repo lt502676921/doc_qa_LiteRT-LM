@@ -65,7 +65,7 @@ export class DocumentChatWindow extends LitElement {
         display: flex;
         flex-direction: column;
         gap: 12px;
-        background: radial-gradient(ellipse at top right, #eaf0fc60, transparent 60%), linear-gradient(180deg, #f7faf8, #fcfdfc);
+        background: var(--surface);
       }
 
       .chat-welcome { margin:auto 0; padding:34px 2px 20px; }
@@ -90,7 +90,7 @@ export class DocumentChatWindow extends LitElement {
 
       .chat-input-container {
         padding: 8px 16px 10px;
-        background-color: var(--bg-card);
+        background-color: var(--surface);
         border-top: none;
         display: block;
         gap: 12px;

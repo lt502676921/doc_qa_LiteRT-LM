@@ -103,7 +103,7 @@ export const workspaceStyles = css`
   .assistant-tabs { display:flex; align-self:stretch; gap:16px; min-width:0; flex-shrink:0; }
   .assistant-tabs button { display:flex; align-items:center; gap:8px; min-height:44px; border:0; border-bottom:2px solid transparent; background:transparent; color:var(--ink-muted); font-size:13px; line-height:1.4; font-weight:500; padding:8px 0; }
   .assistant-tabs button[aria-selected='true'] { color:var(--accent); border-bottom-color:var(--accent); font-weight:600; }
-  .context-panel { margin:12px 16px 0; border:1px solid var(--line); background:#f6f8f5; border-radius:8px; flex-shrink:0; max-height:30vh; overflow:auto; }
+  .context-panel { margin:12px 16px; border:1px solid var(--line); background:#f6f8f5; border-radius:8px; flex-shrink:0; max-height:30vh; overflow:auto; }
   .context-panel > summary { display:flex; gap:7px; align-items:center; padding:10px 11px; list-style:none; cursor:pointer; font-size:12px; color:#597263; }
   .context-panel > summary::-webkit-details-marker { display:none; }
   .context-percent { margin-left:auto; font-size:11px; white-space:nowrap; color:var(--ink-muted); }
@@ -112,7 +112,10 @@ export const workspaceStyles = css`
   .context-warning .context-dot { background:#b98933; }
   .context-details { padding:1px 12px 12px; }
   .context-heading { display:flex; gap:10px; justify-content:space-between; color:var(--ink-muted); font-size:11px; }
-  .context-panel progress { width:100%; height:5px; margin:8px 0; accent-color:var(--accent); }
+  .context-panel progress { display:block; appearance:none; width:100%; height:4px; margin:10px 0 12px; border:0; border-radius:999px; overflow:hidden; background:var(--line); color:var(--accent); }
+  .context-panel progress::-webkit-progress-bar { background:var(--line); border-radius:999px; }
+  .context-panel progress::-webkit-progress-value { background:var(--accent); border-radius:999px; }
+  .context-panel progress::-moz-progress-bar { background:var(--accent); border-radius:999px; }
   .context-panel small { display:block; font-size:11px; line-height:1.6; color:var(--ink-muted); }
   .qa-block { flex:1; min-height:0; display:flex; flex-direction:column; }
   document-chat-window { display:flex; flex:1; min-height:0; }
